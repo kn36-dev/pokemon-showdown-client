@@ -14,7 +14,7 @@ try {
 	require.resolve('@babel/core');
 } catch (e) {
 	console.log('Installing dependencies...');
-	execSync('npm install', {stdio: 'inherit'});
+	execSync('pnpm install', {stdio: 'inherit'});
 }
 
 try {

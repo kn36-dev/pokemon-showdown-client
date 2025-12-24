@@ -7,10 +7,10 @@
  */
 // @ts-check
 
-import eslint from '@eslint/js';
-import globals from 'globals';
-import tseslint from 'typescript-eslint';
-import stylistic from '@stylistic/eslint-plugin';
+import eslint from "@eslint/js";
+import globals from "globals";
+import tseslint from "typescript-eslint";
+import stylistic from "@stylistic/eslint-plugin";
 
 /** @typedef {import('typescript-eslint').Config} ConfigFile */
 /** @typedef {Awaited<ConfigFile>[number]} Config */
@@ -21,22 +21,19 @@ export { eslint, globals, tseslint, stylistic };
 /** @type {Config} */
 export const plugin = {
 	plugins: {
-		'@stylistic': stylistic,
-		'@typescript-eslint': tseslint.plugin,
+		"@stylistic": stylistic,
+		"@typescript-eslint": tseslint.plugin,
 	},
 };
 
 /** @type {typeof tseslint.config} */
-export const configure = (...args) => [
-	plugin,
-	...tseslint.config(...args),
-];
+export const configure = (...args) => [plugin, ...tseslint.config(...args)];
 
 /** @type {NonNullable<Config['rules']>} */
 export const defaultRules = {
 	...stylistic.configs.customize({
-		braceStyle: '1tbs',
-		indent: 'tab',
+		braceStyle: "1tbs",
+		indent: "tab",
 		semi: true,
 		jsx: true,
 		// ...
@@ -51,13 +48,16 @@ export const defaultRules = {
 	// test only (should never be committed, but useful when testing)
 	// ==============================================================
 	// do we want unused args/destructures to start with _? unsure
-	"no-unused-vars": ["warn", {
-		args: "all",
-		argsIgnorePattern: ".",
-		caughtErrors: "all",
-		destructuredArrayIgnorePattern: ".",
-		ignoreRestSiblings: true,
-	}],
+	"no-unused-vars": [
+		"warn",
+		{
+			args: "all",
+			argsIgnorePattern: ".",
+			caughtErrors: "all",
+			destructuredArrayIgnorePattern: ".",
+			ignoreRestSiblings: true,
+		},
+	],
 	// "no-unused-vars": ["warn", {
 	// 	args: "all",
 	// 	argsIgnorePattern: "^_",
@@ -65,12 +65,17 @@ export const defaultRules = {
 	// 	destructuredArrayIgnorePattern: "^_",
 	// 	ignoreRestSiblings: true
 	// }],
-	"@stylistic/max-len": ["warn", {
-		"code": 120, "tabWidth": 0,
-		// DO NOT EDIT DIRECTLY: see bottom of file for source
-		"ignorePattern": "^\\s*(?:\\/\\/ \\s*)?(?:(?:export )?(?:let |const |readonly )?[a-zA-Z0-9_$.]+(?: \\+?=>? )|[a-zA-Z0-9$]+: \\[?|(?:return |throw )?(?:new )?(?:[a-zA-Z0-9$.]+\\()?)?(?:[A-Za-z0-9.]+|\\$\\()?['\"`/]",
-	}],
-	"prefer-const": ["warn", { "destructuring": "all" }],
+	"@stylistic/max-len": [
+		"warn",
+		{
+			code: 120,
+			tabWidth: 0,
+			// DO NOT EDIT DIRECTLY: see bottom of file for source
+			ignorePattern:
+				"^\\s*(?:\\/\\/ \\s*)?(?:(?:export )?(?:let |const |readonly )?[a-zA-Z0-9_$.]+(?: \\+?=>? )|[a-zA-Z0-9$]+: \\[?|(?:return |throw )?(?:new )?(?:[a-zA-Z0-9$.]+\\()?)?(?:[A-Za-z0-9.]+|\\$\\()?['\"`/]",
+		},
+	],
+	"prefer-const": ["warn", { destructuring: "all" }],
 
 	// PS code (code specific to PS)
 	// =============================
@@ -79,7 +84,7 @@ export const defaultRules = {
 
 	// defaults too strict
 	// ===================
-	"no-empty": ["error", { "allowEmptyCatch": true }],
+	"no-empty": ["error", { allowEmptyCatch: true }],
 	"no-case-declarations": "off",
 
 	// probably bugs
@@ -95,7 +100,10 @@ export const defaultRules = {
 	"no-implied-eval": "error",
 	"no-inner-declarations": ["error", "functions"],
 	"no-iterator": "error",
-	"no-fallthrough": ["error", { allowEmptyCase: true, reportUnusedFallthroughComment: true }],
+	"no-fallthrough": [
+		"error",
+		{ allowEmptyCase: true, reportUnusedFallthroughComment: true },
+	],
 	"no-promise-executor-return": ["error", { allowVoid: true }],
 	"no-return-assign": "error",
 	"no-self-compare": "error",
@@ -108,23 +116,31 @@ export const defaultRules = {
 	// "no-unreachable-loop": "error",
 	// ternary is used to convert callbacks to Promises
 	// tagged templates are used for the SQL library
-	"no-unused-expressions": ["error", { allowTernary: true, allowTaggedTemplates: true, enforceForJSX: true }],
+	"no-unused-expressions": [
+		"error",
+		{ allowTernary: true, allowTaggedTemplates: true, enforceForJSX: true },
+	],
 	"no-useless-call": "error",
 	// "no-useless-assignment": "error",
 	"require-atomic-updates": "error",
 
 	// syntax style (local syntactical, usually autofixable formatting decisions)
 	// ===========================================================================
-	"@stylistic/member-delimiter-style": ["error", {
-		multiline: { delimiter: "comma", requireLast: true },
-		singleline: { delimiter: "comma", requireLast: false },
-		overrides: { interface: {
-			multiline: { delimiter: "semi", requireLast: true },
-			singleline: { delimiter: "semi", requireLast: false },
-		} },
-	}],
+	"@stylistic/member-delimiter-style": [
+		"error",
+		{
+			multiline: { delimiter: "comma", requireLast: true },
+			singleline: { delimiter: "comma", requireLast: false },
+			overrides: {
+				interface: {
+					multiline: { delimiter: "semi", requireLast: true },
+					singleline: { delimiter: "semi", requireLast: false },
+				},
+			},
+		},
+	],
 	"default-case-last": "error",
-	"eqeqeq": ["error", "always", { null: "ignore" }],
+	eqeqeq: ["error", "always", { null: "ignore" }],
 	"no-array-constructor": "error",
 	"no-duplicate-imports": "error",
 	"no-implicit-coercion": ["error", { allow: ["!!", "+"] }],
@@ -148,7 +164,7 @@ export const defaultRules = {
 	"prefer-regex-literals": "error",
 	"prefer-rest-params": "error",
 	"prefer-spread": "error",
-	"radix": ["error", "as-needed"],
+	radix: ["error", "as-needed"],
 
 	// syntax style, overriding base
 	// =============================
@@ -156,18 +172,21 @@ export const defaultRules = {
 	"@stylistic/quote-props": "off",
 	"@stylistic/function-call-spacing": "error",
 	"@stylistic/arrow-parens": ["error", "as-needed"],
-	"@stylistic/comma-dangle": ["error", {
-		"arrays": "always-multiline",
-		"objects": "always-multiline",
-		"imports": "always-multiline",
-		"exports": "always-multiline",
-		"functions": "never",
-		"importAttributes": "always-multiline",
-		"dynamicImports": "always-multiline",
-		"enums": "always-multiline",
-		"generics": "always-multiline",
-		"tuples": "always-multiline",
-	}],
+	"@stylistic/comma-dangle": [
+		"error",
+		{
+			arrays: "always-multiline",
+			objects: "always-multiline",
+			imports: "always-multiline",
+			exports: "always-multiline",
+			functions: "never",
+			importAttributes: "always-multiline",
+			dynamicImports: "always-multiline",
+			enums: "always-multiline",
+			generics: "always-multiline",
+			tuples: "always-multiline",
+		},
+	],
 	"@stylistic/jsx-wrap-multilines": "off",
 	"@stylistic/jsx-closing-bracket-location": ["error", "line-aligned"],
 	// "@stylistic/jsx-closing-tag-location": ["error", "line-aligned"],
@@ -176,19 +195,26 @@ export const defaultRules = {
 	"@stylistic/jsx-max-props-per-line": "off",
 	"@stylistic/jsx-function-call-newline": "off",
 	"@stylistic/jsx-child-element-spacing": "error",
-	"no-restricted-syntax": ["error",
-		{ selector: "CallExpression[callee.name='Symbol']", message: "Annoying to serialize, just use a string" },
+	"no-restricted-syntax": [
+		"error",
+		{
+			selector: "CallExpression[callee.name='Symbol']",
+			message: "Annoying to serialize, just use a string",
+		},
 	],
 
 	// whitespace
 	// ==========
 	"@stylistic/block-spacing": "error",
 	"@stylistic/operator-linebreak": ["error", "after"],
-	"@stylistic/max-statements-per-line": ["error", { max: 3, ignoredNodes: ['BreakStatement'] }],
+	"@stylistic/max-statements-per-line": [
+		"error",
+		{ max: 3, ignoredNodes: ["BreakStatement"] },
+	],
 	"@stylistic/lines-between-class-members": "off",
 	"@stylistic/multiline-ternary": "off",
 	"@stylistic/object-curly-spacing": ["error", "always"],
-	"@stylistic/indent": ["error", "tab", { "flatTernaryExpressions": true }],
+	"@stylistic/indent": ["error", "tab", { flatTernaryExpressions: true }],
 };
 
 /** @type {NonNullable<Config['rules']>} */
@@ -213,9 +239,11 @@ export const defaultRulesTS = {
 	"no-shadow": "off",
 	"@typescript-eslint/no-shadow": defaultRules["no-shadow"],
 	"no-dupe-class-members": "off",
-	"@typescript-eslint/no-dupe-class-members": defaultRules["no-dupe-class-members"],
+	"@typescript-eslint/no-dupe-class-members":
+		defaultRules["no-dupe-class-members"],
 	"no-unused-expressions": "off",
-	"@typescript-eslint/no-unused-expressions": defaultRules["no-unused-expressions"],
+	"@typescript-eslint/no-unused-expressions":
+		defaultRules["no-unused-expressions"],
 
 	// defaults too strict
 	// ===================
@@ -234,10 +262,13 @@ export const defaultRulesTS = {
 
 	// naming style
 	// ============
-	"@typescript-eslint/naming-convention": ["error", {
-		"selector": ["class", "interface", "typeAlias"],
-		"format": ["PascalCase"],
-	}],
+	"@typescript-eslint/naming-convention": [
+		"error",
+		{
+			selector: ["class", "interface", "typeAlias"],
+			format: ["PascalCase"],
+		},
+	],
 
 	// syntax style (local syntactical, usually autofixable formatting decisions)
 	// ===========================================================================
@@ -245,14 +276,26 @@ export const defaultRulesTS = {
 	"@typescript-eslint/prefer-namespace-keyword": "error",
 	"@typescript-eslint/adjacent-overload-signatures": "error",
 	"@typescript-eslint/array-type": "error",
-	"@typescript-eslint/consistent-type-assertions": ["error", { "assertionStyle": "as" }],
+	"@typescript-eslint/consistent-type-assertions": [
+		"error",
+		{ assertionStyle: "as" },
+	],
 	"@typescript-eslint/consistent-type-definitions": "off",
-	"@typescript-eslint/consistent-type-imports": ["error", { fixStyle: "inline-type-imports" }],
-	"@typescript-eslint/explicit-member-accessibility": ["error", { "accessibility": "no-public" }],
+	"@typescript-eslint/consistent-type-imports": [
+		"error",
+		{ fixStyle: "inline-type-imports" },
+	],
+	"@typescript-eslint/explicit-member-accessibility": [
+		"error",
+		{ accessibility: "no-public" },
+	],
 	"@typescript-eslint/parameter-properties": "error",
 	// `source` and `target` are frequently used as variables that may point to `this`
 	// or to another `Pokemon` object, depending on how the given method is invoked
-	"@typescript-eslint/no-this-alias": ["error", { "allowedNames": ["source", "target"] }],
+	"@typescript-eslint/no-this-alias": [
+		"error",
+		{ allowedNames: ["source", "target"] },
+	],
 	// unfortunately this has lots of false positives without strict array/object property access
 	// "@typescript-eslint/no-unnecessary-boolean-literal-compare": "error",
 	"@typescript-eslint/prefer-as-const": "error",
@@ -270,13 +313,25 @@ export const defaultRulesTSChecked = {
 	// style
 	// =====
 	"@typescript-eslint/no-unnecessary-type-arguments": "error",
-	"@typescript-eslint/restrict-plus-operands": ["error", {
-		allowBoolean: false, allowNullish: false, allowNumberAndString: false, allowRegExp: false,
-	}],
-	"@typescript-eslint/restrict-template-expressions": ["error", {
-		allow: [{ name: ['Error', 'URL', 'URLSearchParams'], from: 'lib' }],
-		allowBoolean: false, allowNever: false, allowNullish: false, allowRegExp: false,
-	}],
+	"@typescript-eslint/restrict-plus-operands": [
+		"error",
+		{
+			allowBoolean: false,
+			allowNullish: false,
+			allowNumberAndString: false,
+			allowRegExp: false,
+		},
+	],
+	"@typescript-eslint/restrict-template-expressions": [
+		"error",
+		{
+			allow: [{ name: ["Error", "URL", "URLSearchParams"], from: "lib" }],
+			allowBoolean: false,
+			allowNever: false,
+			allowNullish: false,
+			allowRegExp: false,
+		},
+	],
 
 	// we use `any`
 	// ============
@@ -307,19 +362,26 @@ export const defaultRulesES3 = {
 	"prefer-object-spread": "off",
 	"prefer-rest-params": "off",
 	"prefer-spread": "off",
-	"radix": "off",
+	radix: "off",
 	"@stylistic/comma-dangle": "error",
-	"no-unused-vars": ["warn", {
-		args: "all",
-		argsIgnorePattern: ".",
-		caughtErrors: "all",
-		caughtErrorsIgnorePattern: "^e(rr)?$",
-		destructuredArrayIgnorePattern: ".",
-		ignoreRestSiblings: true,
-	}],
-	"no-restricted-syntax": ["error",
+	"no-unused-vars": [
+		"warn",
+		{
+			args: "all",
+			argsIgnorePattern: ".",
+			caughtErrors: "all",
+			caughtErrorsIgnorePattern: "^e(rr)?$",
+			destructuredArrayIgnorePattern: ".",
+			ignoreRestSiblings: true,
+		},
+	],
+	"no-restricted-syntax": [
+		"error",
 		{ selector: "TaggedTemplateExpression", message: "Not supported by ES3" },
-		{ selector: "CallExpression[callee.name='Symbol']", message: "Annoying to serialize, just use a string" },
+		{
+			selector: "CallExpression[callee.name='Symbol']",
+			message: "Annoying to serialize, just use a string",
+		},
 	],
 
 	// with no block scoping, coming up with original variable names is too hard
@@ -332,8 +394,16 @@ export const defaultRulesES3 = {
 	"no-invalid-this": "error",
 	"no-new-wrappers": "error",
 	// Map/Set can be polyfilled but it's nontrivial and it's easier just to use bare objects
-	// fetch can be polyfilled, but our standard is to use $.get or Net as appropriate.
-	"no-restricted-globals": ["error", "Proxy", "Reflect", "Symbol", "WeakSet", "WeakMap", "Set", "Map", "fetch"],
+	"no-restricted-globals": [
+		"error",
+		"Proxy",
+		"Reflect",
+		"Symbol",
+		"WeakSet",
+		"WeakMap",
+		"Set",
+		"Map",
+	],
 	"unicode-bom": "error",
 };
 
@@ -345,11 +415,23 @@ export const defaultRulesES3 = {
  */
 export const defaultRulesES3TSChecked = {
 	...defaultRulesTSChecked,
-	"radix": "off",
-	// Map/Set can be polyfilled but it's nontrivial and it's easier just to use bare objects
-	// fetch can be polyfilled, but our standard is to use $.get or Net as appropriate.
-	"no-restricted-globals": ["error", "Proxy", "Reflect", "Symbol", "WeakSet", "WeakMap", "Set", "Map", "fetch"],
-	"no-restricted-syntax": ["error", "YieldExpression", "AwaitExpression", "BigIntLiteral"],
+	radix: "off",
+	"no-restricted-globals": [
+		"error",
+		"Proxy",
+		"Reflect",
+		"Symbol",
+		"WeakSet",
+		"WeakMap",
+		"Set",
+		"Map",
+	],
+	"no-restricted-syntax": [
+		"error",
+		"YieldExpression",
+		"AwaitExpression",
+		"BigIntLiteral",
+	],
 };
 
 /**
@@ -357,8 +439,12 @@ export const defaultRulesES3TSChecked = {
  * @returns {Config}
  */
 function extractPlugin(configs) {
-	return configs.find(config => !config.rules) ||
-		(() => { throw new Error('No plugin found'); })();
+	return (
+		configs.find((config) => !config.rules) ||
+		(() => {
+			throw new Error("No plugin found");
+		})()
+	);
 }
 /**
  * @param {Config[]} configs
@@ -366,7 +452,7 @@ function extractPlugin(configs) {
  */
 function extractRules(configs) {
 	const rules = {};
-	for (const config of configs.filter(c => c.rules)) {
+	for (const config of configs.filter((c) => c.rules)) {
 		Object.assign(rules, config.rules);
 	}
 	return rules;
@@ -375,34 +461,44 @@ const tseslintPlugin = extractPlugin(tseslint.configs.stylisticTypeChecked);
 
 /** @type {{[k: string]: Config[]}} */
 export const configs = {
-	js: [{
-		rules: {
-			...eslint.configs.recommended.rules,
-			...defaultRules,
+	js: [
+		{
+			rules: {
+				...eslint.configs.recommended.rules,
+				...defaultRules,
+			},
 		},
-	}],
-	ts: [tseslintPlugin, {
-		rules: {
-			...eslint.configs.recommended.rules,
-			...extractRules(tseslint.configs.recommendedTypeChecked),
-			...extractRules(tseslint.configs.stylisticTypeChecked),
-			...defaultRulesTSChecked,
+	],
+	ts: [
+		tseslintPlugin,
+		{
+			rules: {
+				...eslint.configs.recommended.rules,
+				...extractRules(tseslint.configs.recommendedTypeChecked),
+				...extractRules(tseslint.configs.stylisticTypeChecked),
+				...defaultRulesTSChecked,
+			},
 		},
-	}],
-	es3: [{
-		rules: {
-			...eslint.configs.recommended.rules,
-			...defaultRulesES3,
+	],
+	es3: [
+		{
+			rules: {
+				...eslint.configs.recommended.rules,
+				...defaultRulesES3,
+			},
 		},
-	}],
-	es3ts: [tseslintPlugin, {
-		rules: {
-			...eslint.configs.recommended.rules,
-			...extractRules(tseslint.configs.recommendedTypeChecked),
-			...extractRules(tseslint.configs.stylisticTypeChecked),
-			...defaultRulesES3TSChecked,
+	],
+	es3ts: [
+		tseslintPlugin,
+		{
+			rules: {
+				...eslint.configs.recommended.rules,
+				...extractRules(tseslint.configs.recommendedTypeChecked),
+				...extractRules(tseslint.configs.stylisticTypeChecked),
+				...defaultRulesES3TSChecked,
+			},
 		},
-	}],
+	],
 };
 
 /*

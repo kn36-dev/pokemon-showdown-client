@@ -987,10 +987,10 @@ p.or:after {
 	position: absolute;
 	left: -30px;
 	bottom: -5px;
-	background: url(https://play.pokemonshowdown.com/sprites/gen5/meloetta.png) center no-repeat;
+	background: url(http://localhost:8000/sprites/gen5/meloetta.png) center no-repeat;
 }
 .roomcounters button:hover .usercount {
-	background: url(https://play.pokemonshowdown.com/sprites/gen5ani/meloetta.gif) center no-repeat;
+	background: url(http://localhost:8000/sprites/gen5ani/meloetta.gif) center no-repeat;
 }
 .roomcounters .battlecount {
 	display: block;
@@ -999,11 +999,11 @@ p.or:after {
 	position: absolute;
 	right: -30px;
 	bottom: -10px;
-	background: url(https://play.pokemonshowdown.com/sprites/gen5/meloetta-pirouette.png) center no-repeat;
+	background: url(http://localhost:8000/sprites/gen5/meloetta-pirouette.png) center no-repeat;
 }
 .roomcounters button:hover .battlecount {
-	background: url(https://play.pokemonshowdown.com/sprites/gen5ani/meloetta-pirouette.gif) center no-repeat;
-} 
+	background: url(http://localhost:8000/sprites/gen5ani/meloetta-pirouette.gif) center no-repeat;
+}
 
 .roomlist {
 	max-width: 480px;
@@ -2365,7 +2365,7 @@ p.or:after {
 	background: transparent;
 	border: 1px solid transparent;
 	border-radius: 4px;
-	padding: 2px 5px;
+	padding: 2px 2px;
 	margin: 0;
 	font-size: 9pt;
 	font-family: Verdana, sans-serif;
@@ -2406,6 +2406,20 @@ p.or:after {
 	width: 626px;
 	margin-top: 8px;
 
+	box-shadow: inset 1px 1px 0 rgba(255,255,255,.6);
+}
+.setcell {
+	float: left;
+}
+.setcell-fusion {
+	position: absolute;
+	left: 172px;
+	top: 5px;
+	border: 1px solid #999999;
+	background: #CBD6E1;
+	border-radius: 5px;
+	padding: 1px 0 0 0;
+	width: 110px;
 	box-shadow: inset 1px 1px 0 rgba(255,255,255,.6);
 }
 .setcol {
@@ -3003,7 +3017,7 @@ p.or:after {
 .avatarlist button {
 	width: 80px;
 	height: 80px;
-	background: transparent url(https://play.pokemonshowdown.com/sprites/trainers-sheet.png) no-repeat scroll 0px 0px;
+	background: transparent url(localhost:8000/sprites/trainers-sheet.png) no-repeat scroll 0px 0px;
 }
 .bglist button span {
 	display: block;
@@ -3322,4 +3336,30 @@ p.or:after {
 .dark iframe.textbox:hover,
 .dark iframe.textbox:focus {
 	background: #DDDDDD;
+}
+/*********************************************************
+ * Custom Fusion Dark Mode Overrides
+ *********************************************************/
+
+/* Targets the input fields inside your fusion setcell */
+.dark .setcell-fusion input,
+.dark .setcell-fusion select {
+    background-color: #222222; /* Dark background */
+    color: #eeeeee;            /* Light text */
+    border: 1px solid #444444; /* Subtle border */
+    border-radius: 4px;
+}
+
+/* Optional: Highlight the field when you click/focus on it */
+.dark .setcell-fusion input:focus {
+    background-color: #333333;
+    border-color: #6bacc5;     /* Showdown blue accent */
+    outline: none;
+}
+
+/* If you have labels or text inside that cell */
+.dark .setcell-fusion {
+    color: #bbbbbb;
+	 background: #5A6570;
+	 box-shadow: none;
 }

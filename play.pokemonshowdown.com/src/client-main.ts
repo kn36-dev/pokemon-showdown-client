@@ -52,6 +52,7 @@ export interface PSConfig {
 	customcolors: Record<string, string>;
 	whitelist?: string[];
 	testclient?: boolean;
+	resourceprefix?: string;
 }
 export declare const Config: PSConfig;
 

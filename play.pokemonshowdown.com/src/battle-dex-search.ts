@@ -14,7 +14,7 @@
 import { Dex, type ModdedDex, toID, type ID } from "./battle-dex";
 
 export type SearchType = (
-	'pokemon' | 'type' | 'tier' | 'move' | 'item' | 'ability' | 'egggroup' | 'category' | 'article'
+	'pokemon' | 'type' | 'tier' | 'move' | 'item' | 'ability' | 'egggroup' | 'category' | 'article' | 'fusion'
 );
 
 export type SearchRow = (
@@ -1002,7 +1002,9 @@ class BattlePokemonSearch extends BattleTypedSearch<'pokemon'> {
 	}
 	getBaseResults(): SearchRow[] {
 		const format = this.format;
-		if (!format) return this.getDefaultResults();
+		if (!format) {
+			return this.getDefaultResults();
+		}
 		const isVGCOrBS = format.startsWith('battlespot') || format.startsWith('bss') ||
 			format.startsWith('battlestadium') || format.startsWith('vgc');
 		const isHackmons = format.includes('hackmons') || format.endsWith('bh');
@@ -1083,6 +1085,7 @@ class BattlePokemonSearch extends BattleTypedSearch<'pokemon'> {
 			table.tiers = null;
 		}
 		let tierSet: SearchRow[] = table.tierSet;
+
 		let slices: { [k: string]: number } = table.formatSlices;
 		if (format === 'ubers' || format === 'uber' || format === 'ubersuu' || format === 'nationaldexdoubles') {
 			tierSet = tierSet.slice(slices.Uber);
@@ -1192,6 +1195,41 @@ class BattlePokemonSearch extends BattleTypedSearch<'pokemon'> {
 				if (id in table.gen4puBans) return false;
 				return true;
 			});
+		}
+		// This block handles 'generation1' through 'generation9'
+		if (format.startsWith('generation')) {
+			// Extract the number from the end of the string (e.g., "generation5" -> 5)
+			const targetGen = parseInt(format.replace('generation', ''), 10);
+
+			// Ensure we actually got a valid number between 1 and 9
+			if (targetGen >= 1 && targetGen <= 9) {
+				tierSet = tierSet.filter(([type, id]) => {
+					if (type !== 'pokemon') return true; // Keep headers
+					const species = this.dex.species.get(id);
+
+					// Match the Pokemon's origin generation to the number in the format ID
+					const notMega = !species.isMega;
+					const NotPrimal = !species.isPrimal;
+					const notTerapagos = !species.name.includes('Terapagos');
+					const notNecrozmaUltra = species.name !== 'Necrozma-Ultra';
+					const notGreninjaAsh = species.name !== 'Greninja-Ash' && species.name !== 'Greninja-Bond';
+					const notZygardeComplete = species.name !== 'Zygarde-Complete';
+					const notZacianCrowned = species.name !== 'Zacian-Crowned';
+					const notZamazentaCrowned = species.name !== 'Zamazenta-Crowned';
+					const notSameSpecies = this.set ? this.set.species !== species.name : true;
+
+					return species.gen <= targetGen &&
+						notSameSpecies &&
+						notMega &&
+						NotPrimal &&
+						notTerapagos &&
+						notNecrozmaUltra &&
+						notGreninjaAsh &&
+						notZygardeComplete &&
+						notZacianCrowned &&
+						notZamazentaCrowned;
+				});
+			}
 		}
 
 		// Filter out Gmax Pokemon from standard tier selection
