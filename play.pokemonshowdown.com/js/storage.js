@@ -885,7 +885,7 @@ Storage.packTeam = function (team) {
 			buf += ',' + (set.gigantamax ? 'G' : '');
 			buf += ',' + (set.dynamaxLevel !== undefined && set.dynamaxLevel !== 10 ? set.dynamaxLevel : '');
 			buf += ',' + (set.teraType || '');
-			buf += ',' + (set.fusionSet && set.fusionSet.baseSpecies ? set.fusionSet.baseSpecies : '');
+			buf += ',' + (set.fusionSet && set.fusionSet.baseSpecies ? toID(set.fusionSet.baseSpecies) : '');
 		}
 	}
 
@@ -1033,6 +1033,7 @@ Storage.unpackTeam = function (buf) {
 		j = buf.indexOf('|', i);
 		var species = Dex.species.get(buf.substring(i, j) || set.name);
 		set.species = species.name;
+		set.weightkg = species.weightkg;
 		i = j + 1;
 
 		// item
@@ -1226,6 +1227,7 @@ Storage.importTeam = function (buffer, teams) {
 		Storage.teams = [];
 		teams = Storage.teams;
 	} else if (text.length === 1 || (text.length === 2 && !text[1])) {
+		console.log("After importing whole team storage line 1230");
 		return Storage.unpackTeam(text[0]);
 	}
 	for (var i = 0; i < text.length; i++) {
@@ -1248,7 +1250,8 @@ Storage.importTeam = function (buffer, teams) {
 				line = $.trim(line.substr(bracketIndex + 1));
 			}
 			if (teams.length && typeof teams[teams.length - 1].team !== 'string') {
-				console.log("packTeam in storage at line 1236");
+
+				console.log("After importing whole team storage line 1254");
 				teams[teams.length - 1].team = Storage.packTeam(teams[teams.length - 1].team);
 			}
 			var slashIndex = line.lastIndexOf('/');
@@ -1271,6 +1274,7 @@ Storage.importTeam = function (buffer, teams) {
 			curSet = null;
 			teams.push(Storage.unpackLine(line));
 		} else if (!curSet) {
+			console.log("Line 1277");
 			curSet = { name: '', species: '', gender: '' };
 			team.push(curSet);
 			var atIndex = line.lastIndexOf(' @ ');
@@ -1325,6 +1329,9 @@ Storage.importTeam = function (buffer, teams) {
 			curSet.dynamaxLevel = +line;
 		} else if (line === 'Gigantamax: Yes') {
 			curSet.gigantamax = true;
+		} else if (line.substr(0, 8) === 'Fusion: ') {
+			line = line.substr(8);
+			curSet.fusionSet = Dex.species.get(line);
 		} else if (line.substr(0, 5) === 'EVs: ') {
 			line = line.substr(5);
 			var evLines = line.split('/');
@@ -1380,7 +1387,7 @@ Storage.importTeam = function (buffer, teams) {
 		}
 	}
 	if (teams && teams.length && typeof teams[teams.length - 1].team !== 'string') {
-		console.log("packTeam in storage at line 1368");
+		console.log("After importing whole team storage line 1386");
 		teams[teams.length - 1].team = Storage.packTeam(teams[teams.length - 1].team);
 	}
 	return team;
@@ -1451,9 +1458,12 @@ Storage.exportTeam = function (team, gen, hidestats) {
 		if (curSet.gigantamax) {
 			text += 'Gigantamax: Yes  \n';
 		}
-		if (gen === 9) {
-			var species = Dex.species.get(curSet.species);
-			text += 'Tera Type: ' + (curSet.teraType || species.requiredTeraType || species.types[0]) + "  \n";
+		// if (gen === 9) {
+		// 	var species = Dex.species.get(curSet.species);
+		// 	text += 'Tera Type: ' + (curSet.teraType || species.requiredTeraType || species.types[0]) + "  \n";
+		// }
+		if (curSet.fusionSet && curSet.fusionSet.baseSpecies) {
+			text += 'Fusion: ' + curSet.fusionSet.baseSpecies + "  \n";
 		}
 		if (!hidestats) {
 			var first = true;

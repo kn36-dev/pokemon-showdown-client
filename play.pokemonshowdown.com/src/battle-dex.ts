@@ -36,6 +36,9 @@ import type * as DexData from "./battle-dex-data";
 import type { Teams } from "./battle-teams";
 import { Config } from "./client-main";
 
+// Simple cache to store which fusion images work (true) and which 404 (false)
+const FUSION_IMAGE_CACHE: Record<string, boolean> = {};
+
 export declare namespace Dex {
 	/* eslint-disable @typescript-eslint/no-shadow */
 	export type Ability = DexData.Ability;
@@ -1087,24 +1090,76 @@ export const Dex = new (class implements ModdedDex {
 	) {
 		if (!pokemon) return "";
 
-		if (pokemon.fusionSet?.baseSpecies) {
-			const baseUrl = `${Dex.resourcePrefix}sprites/home-centered-fusion/`;
-			const directoryName = `${pokemon.species}/`;
-			const fileName = `${pokemon.species}-${pokemon.fusionSet.baseSpecies}.png`;
-			const backgroundProperties = "background-repeat:no-repeat;background-size:115px;background-position:7.5px 2.5px";
-			return `background-image:url(${baseUrl}${directoryName}${fileName});${backgroundProperties}`;
-		}
-
 		const data = this.getTeambuilderSpriteData(pokemon, dex);
-
 		const shiny = data.shiny ? "-shiny" : "";
 		const resize = data.h ? `background-size:${data.h}px` : "";
 
-		return `background-image:url(${Dex.resourcePrefix}${
-			data.spriteDir
-		}${shiny}/${data.spriteid}.png);background-position:${
-			data.x + xOffset
-		}px ${data.y + yOffset}px;background-repeat:no-repeat;${resize}`;
+		const originalUrl = `${Dex.resourcePrefix}${data.spriteDir}${shiny}/${data.spriteid}.png`;
+		const originalStyle = `background-image:url(${originalUrl});background-position:${data.x + xOffset}px ${data.y + yOffset}px;background-repeat:no-repeat;${resize}`;
+
+		if (!pokemon.fusionSet?.baseSpecies) {
+			return originalStyle;
+		}
+
+		// Get head spriteId
+		const headId = toID(pokemon.species || pokemon);
+		const headSpecies = Dex.species.get(headId);
+		let headSpriteId: string;
+		if (typeof pokemon === "string") {
+			headSpriteId = headSpecies.spriteid || headId;
+		} else {
+			headSpriteId = pokemon.spriteid;
+			if (pokemon.species && !headSpriteId) {
+				headSpriteId = headSpecies.spriteid || headId;
+			}
+		}
+
+		// Get body spriteId
+		const bodyId = toID(pokemon.fusionSet.baseSpecies);
+		const bodySpecies = Dex.species.get(bodyId);
+		let bodySpriteId: string;
+		if (typeof pokemon === "string") {
+			bodySpriteId = bodySpecies.spriteid || headId;
+		} else {
+			bodySpriteId = pokemon.spriteid;
+			if (pokemon.species && !bodySpriteId) {
+				bodySpriteId = bodySpecies.spriteid || headId;
+			}
+		}
+
+		const fusionBaseUrl = `${Dex.resourcePrefix}sprites/home-centered-fusion/`;
+		const directoryName = `${headSpriteId}/`;
+		const fileName = `${headSpriteId}-${bodySpriteId}.png`;
+		const fusionUrl = `${fusionBaseUrl}${directoryName}${fileName}`;
+		// const originalUrl = `${Dex.resourcePrefix}${data.spriteDir}${shiny}/${data.spriteid}.png`;
+
+		// Case A: We ALREADY know this fusion works -> Return ONLY Fusion
+		if (FUSION_IMAGE_CACHE[fusionUrl] === true) {
+			return `background-image:url(${fusionUrl});background-position:7.5px 2.5px;background-repeat:no-repeat;background-size:115px`;
+		}
+
+		// Case B: We ALREADY know this fusion fails (404) -> Return ONLY Original
+		if (FUSION_IMAGE_CACHE[fusionUrl] === false) {
+			return originalStyle;
+		}
+
+		// Case C: Unknown Status -> Return Original (Safe) AND Load in Background
+		const img = new Image();
+		img.src = fusionUrl;
+		img.onload = () => {
+			FUSION_IMAGE_CACHE[fusionUrl] = true;
+			// Note: The image will "snap" to the fusion the next time the UI updates (hover/click)
+		};
+		img.onerror = () => {
+			FUSION_IMAGE_CACHE[fusionUrl] = false;
+		};
+
+		// Return original for now so we don't show the "Overlap" mess while loading
+		return originalStyle;
+
+		// return `background-image:url(${fusionUrl}), url(${originalUrl});background-position:7.5px 2.5px, ${
+		// 	data.x + xOffset
+		// }px ${data.y + yOffset}px;background-repeat:no-repeat, no-repeat;background-size: 115px, ${data.h ? data.h : ''}px`;
 	}
 
 	getItemIcon(item: any) {

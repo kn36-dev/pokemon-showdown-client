@@ -27,6 +27,7 @@ export default configure([
 			'play.pokemonshowdown.com/js/search.js',
 			'play.pokemonshowdown.com/js/storage.js',
 			'play.pokemonshowdown.com/js/battle-fusion.js',
+			'play.pokemonshowdown.com/js/battle-fusion-data.js',
 			'config/config-example.js',
 		],
 		extends: [configs.es3],
@@ -53,7 +54,7 @@ export default configure([
 				"BattleTextParser": false, "BattleChatCommands": false,
 
 				// Generic global variables
-				"Config": false, "BattleSearch": false, "BattleFusion": false, "Storage": false, "Dex": false, "DexSearch": false,
+				"Config": false, "BattleSearch": false, "BattleFusion": false, "POKEMON_NAME_PREFIX_SUFFIX": false, "Storage": false, "Dex": false, "DexSearch": false,
 				"app": false, "toID": false, "toRoomid": false, "toUserid": false, "toName": false, "PSUtils": false, "MD5": false,
 				"ChatHistory": false, "Topbar": false, "UserList": false,
 

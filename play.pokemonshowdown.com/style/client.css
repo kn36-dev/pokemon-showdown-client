@@ -2580,7 +2580,7 @@ p.or:after {
 }
 .setstats .statgraph {
 	float: left;
-	width: 75px;
+	width: 82px;
 	padding: 0 0 0 3px;
 	height: 5px;
 }
@@ -2603,6 +2603,9 @@ p.or:after {
 }
 .setstats .statrow-head em {
 	color: #555555;
+}
+.statrow.statrow-head label {
+	width: 64px;
 }
 .teamnameedit {
 	width: 300px;

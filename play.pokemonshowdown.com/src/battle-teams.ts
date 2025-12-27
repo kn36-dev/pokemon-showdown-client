@@ -44,6 +44,7 @@ export declare namespace Teams {
 	export interface PokemonSet extends Partial<FullPokemonSet> {
 		/** Defaults to species name (not including forme), like in games */
 		species: string;
+		fusionSet: { baseSpecies: string };
 		moves: string[];
 	}
 	export interface Team {
