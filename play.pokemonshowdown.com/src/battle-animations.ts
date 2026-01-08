@@ -863,26 +863,76 @@ export class BattleScene implements BattleSceneStub {
 				if (pokemon.speciesForme === 'Ludicolo') ludicoloCount++;
 				if (pokemon.speciesForme === 'Lombre') lombreCount++;
 
+				// Check getSpriteData here
+				console.log({ pokemonInTeamPreview: pokemon });
+
+				// Base Pokemon
 				let spriteData = Dex.getSpriteData(pokemon, !!spriteIndex, {
 					gen: this.gen,
 					noScale: true,
 					mod: this.mod,
 				});
+
+				// 1. Capture Base Dimensions (for fallback)
+				const baseW = spriteData.w;
+				const baseH = spriteData.h;
+
 				let y = 0;
 				let x = 0;
+
 				if (spriteIndex) {
+					console.log("In Sprite Index");
 					y = 48 + 50 + 3 * (i + 6 - side.pokemon.length);
 					x = 48 + 180 + 50 * (i + 6 - side.pokemon.length);
 				} else {
+					console.log("Outside Sprite Index");
 					y = 48 + 200 + 3 * i;
 					x = 48 + 100 + 50 * i;
 				}
+
 				if (textBuf) textBuf += ' / ';
+
 				textBuf += pokemon.speciesForme;
+
+				const baseId = toID(pokemon.speciesForme);
+				const fusionId = toID((pokemon as any).fusion);
+
+				const fallbackUrl = spriteData.url;
+				(spriteData as SpriteData).fallbackUrl = spriteData.url;
+
+				if (fusionId) {
+					// // Set the new Fusion URL
+					// spriteData.url = Dex.resourcePrefix + `sprites/home-centered-fusion/${baseId}/${baseId}-${fusionId}.png`;
+					spriteData.url = Dex.resourcePrefix + `sprites/home-centered-fusion/${baseId}/${baseId}-${fusionId}.png`;
+					spriteData.w = 96;
+					spriteData.h = 96;
+				}
+
 				let url = spriteData.url;
+
+				console.log({ url, spriteWidth: spriteData.w, spriteHeight: spriteData.h });
+
+				// Determine if we need to flip the image horizontally
+				// spriteIndex 0 is usually the player's side (bottom-left)
+				const flipTransform = spriteIndex === 0 ? 'transform:scaleX(-1);' : '';
+
 				// if (this.paused) url.replace('/xyani', '/xy').replace('.gif', '.png');
-				buf += `<img src="${url}" width="${spriteData.w}" height="${spriteData.h}" style="position:absolute;top:${Math.floor(y - spriteData.h / 2)}px;left:${Math.floor(x - spriteData.w / 2)}px" />`;
+
+				buf += `<img src="${url}"
+				data-fallback-src="${fallbackUrl}"
+				data-base-w="${baseW}"
+				data-base-h="${baseH}"
+				data-cx="${x}"
+				data-cy="${y}"
+				width="${spriteData.w}"
+				height="${spriteData.h}"
+				style="position:absolute;
+				top:${Math.floor(y - spriteData.h / 2)}px;
+				left:${Math.floor(x - spriteData.w / 2)}px;
+				${flipTransform}" />`;
+
 				buf2 += `<div style="position:absolute;top:${y + 45}px;left:${x - 40}px;width:80px;font-size:10px;text-align:center;color:#FFF;">`;
+
 				const gender = pokemon.gender;
 				if (gender === 'M' || gender === 'F') {
 					buf2 += `<img src="${Dex.fxPrefix}gender-${gender.toLowerCase()}.png" alt="${gender}" width="7" height="10" class="pixelated" style="margin-bottom:-1px" /> `;
@@ -904,6 +954,48 @@ export class BattleScene implements BattleSceneStub {
 				);
 			}
 			this.$sprites[spriteIndex].html(buf + buf2);
+
+			// 3. CHANGE: Attach robust error handlers immediately after rendering
+			this.$sprites[spriteIndex].find('img[data-fallback-src]').each(function () {
+				const $img = $(this);
+				const fallback = $img.attr('data-fallback-src');
+
+				// Retrieve stored base data for recalculation
+				const baseW = parseInt($img.attr('data-base-w') || '0');
+				const baseH = parseInt($img.attr('data-base-h') || '0');
+				const cx = parseInt($img.attr('data-cx') || '0');
+				const cy = parseInt($img.attr('data-cy') || '0');
+
+				const errorHandler = function () {
+					// Prevent infinite loops and remove the attribute
+					$img.off('error');
+					if (fallback) {
+						$img.attr('src', fallback);
+
+						// 5. Apply Base Dimensions and Recalculate Position
+						if (baseW && baseH && cx && cy) {
+							$img.attr('width', baseW);
+							$img.attr('height', baseH);
+							$img.css({
+								'width': `${baseW}px`,
+								'height': `${baseH}px`,
+								'top': `${Math.floor(cy - baseH / 2)}px`,
+								'left': `${Math.floor(cx - baseW / 2)}px`,
+								'transform': 'none',
+							});
+						}
+					}
+				};
+
+				// Attach listener for async failures
+				$img.on('error', errorHandler);
+
+				// Handle race condition: if image failed immediately (e.g. cached 404)
+				// HTMLImageElement.complete is true and naturalWidth is 0 if it failed.
+				if ((this as HTMLImageElement).complete && (this as HTMLImageElement).naturalWidth === 0) {
+					errorHandler();
+				}
+			});
 
 			if (!newBGNum) {
 				if (ludicoloCount >= 2) {
@@ -1112,16 +1204,48 @@ export class BattleScene implements BattleSceneStub {
 	}
 
 	addPokemonSprite(pokemon: Pokemon) {
-		const sprite = new PokemonSprite(Dex.getSpriteData(pokemon, pokemon.side.isFar, {
+		// 1. Get the default sprite data (Base Pokemon)
+		const spriteData = Dex.getSpriteData(pokemon, pokemon.side.isFar, {
 			gen: this.gen,
 			mod: this.mod,
-		}), {
+		});
+		// const sprite = new PokemonSprite(Dex.getSpriteData(pokemon, pokemon.side.isFar, {
+		// 	gen: this.gen,
+		// 	mod: this.mod,
+		// }), {
+		// 	x: pokemon.side.x,
+		// 	y: pokemon.side.y,
+		// 	z: pokemon.side.z,
+		// 	opacity: 0,
+		// }, this, pokemon.side.isFar);
+
+		// console.log({ spriteData });
+		// 2. Check for Fusion and override URL
+		if (pokemon.fusion) {
+			// Construct filename: "Base-Fusion.png" (e.g. "lucario-greninja.png")
+			// Ensure you convert names to IDs (lowercase, no spaces)
+			const baseId = toID(pokemon.speciesForme);
+			const fusionId = toID((pokemon as any).fusion);
+
+			// Save the original URL for fallback
+			(spriteData as SpriteData).fallbackUrl = spriteData.url;
+			// Set the new Fusion URL
+			spriteData.url = Dex.resourcePrefix + `sprites/home-centered-fusion/${baseId}/${baseId}-${fusionId}.png`;
+			(spriteData as SpriteData).isFusion = true;
+			// console.log({ spriteDataInFusionBlock: spriteData });
+		}
+
+		// KN: RIGHT HERE
+		const sprite = new PokemonSprite(spriteData, {
 			x: pokemon.side.x,
 			y: pokemon.side.y,
 			z: pokemon.side.z,
 			opacity: 0,
 		}, this, pokemon.side.isFar);
+		// console.log({ sprite });
+
 		if (sprite.$el) this.$sprites[+pokemon.side.isFar].append(sprite.$el);
+		// console.log({ returnedSprite: sprite });
 		return sprite;
 	}
 
@@ -1594,7 +1718,9 @@ export class BattleScene implements BattleSceneStub {
 		for (let i in BattleEffects) {
 			if (i === 'alpha' || i === 'omega') continue;
 			const url = BattleEffects[i].url;
-			if (url) this.preloadImage(url);
+			if (url) {
+				this.preloadImage(url);
+			}
 		}
 		this.preloadImage(Dex.resourcePrefix + 'sprites/ani/substitute.gif');
 		this.preloadImage(Dex.resourcePrefix + 'sprites/ani-back/substitute.gif');
@@ -1947,6 +2073,27 @@ export class PokemonSprite extends Sprite {
 		super(spriteData, pos, scene);
 		this.cryurl = this.sp.cryurl;
 		this.isFrontSprite = isFrontSprite;
+
+		// console.log({ isSpriteDataFusion: spriteData?.isFusion });
+
+		// NEW CODE: Fallback logic
+		if (spriteData?.isFusion && spriteData.url) {
+			this.$el.on('error', () => {
+				console.log("Error triggered for fusion:", spriteData.url);
+
+				// 1. Remove the handler immediately to prevent infinite loops if fallback also fails
+				this.$el.off('error');
+
+				// 2. Apply fallback
+				if (spriteData.fallbackUrl) {
+					this.$el.attr('src', spriteData.fallbackUrl);
+				}
+			});
+
+			// CRITICAL FIX: Re-assign the src attribute to force the browser
+			// to acknowledge the new listener we just added.
+			this.$el.attr('src', spriteData.url);
+		}
 	}
 	override destroy() {
 		if (this.$el) this.$el.remove();
@@ -2122,6 +2269,7 @@ export class PokemonSprite extends Sprite {
 		this.$sub = null;
 	}
 	reset(pokemon: Pokemon) {
+		console.log("Is reset called?");
 		this.clearEffects();
 
 		if (pokemon.volatiles.formechange || pokemon.volatiles.dynamax || pokemon.volatiles.terastallize) {
@@ -2148,7 +2296,24 @@ export class PokemonSprite extends Sprite {
 		if (this.$el) {
 			this.$el.stop(true, false);
 			this.$el.remove();
-			const $newEl = $(`<img src="${this.sp.url!}" style="display:none;position:absolute"${this.sp.pixelated ? ' class="pixelated"' : ''} />`);
+
+			// 1. Create the IMG tag WITHOUT the src attribute initially
+			const $newEl = $(`<img style="display:none;position:absolute"${this.sp.pixelated ? ' class="pixelated"' : ''} />`);
+
+			// 2. Attach the error listener BEFORE setting the src
+			if ((this.sp as any).isFusion) {
+				$newEl.on('error', () => {
+					console.log("Reset Error triggered for:", this.sp.url);
+					$newEl.off('error');
+					if ((this.sp as any).fallbackUrl) {
+						$newEl.attr('src', (this.sp as any).fallbackUrl);
+					}
+				});
+			}
+
+			// 3. Now set the src, triggering the browser fetch
+			$newEl.attr('src', this.sp.url!);
+
 			this.$el = $newEl;
 		}
 

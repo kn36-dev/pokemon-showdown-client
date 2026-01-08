@@ -224,6 +224,10 @@ export interface SpriteData {
 	isFrontSprite?: boolean;
 	cryurl?: string;
 	shiny?: boolean;
+
+	// Addition
+	isFusion?: boolean;
+	fallbackUrl?: string;
 }
 
 export interface TeambuilderSpriteData {
@@ -711,7 +715,7 @@ export const Dex = new (class implements ModdedDex {
 			cryurl: "",
 			shiny: options.shiny,
 		};
-		let name = species.spriteid;
+		let name = species.spriteid; // irontreads
 		let dir;
 		let facing;
 		if (isFront) {
@@ -735,6 +739,7 @@ export const Dex = new (class implements ModdedDex {
 		//     (eg. Darmanitan in graphicsGen 2) then we go up gens until it exists.
 		//
 		let graphicsGen = mechanicsGen;
+		console.log({ graphicsGen });
 		if (Dex.prefs("nopastgens")) graphicsGen = 6;
 		if (Dex.prefs("bwgfx") && graphicsGen >= 6) graphicsGen = 5;
 		spriteData.gen = Math.max(graphicsGen, Math.min(species.gen, 5));
@@ -754,11 +759,20 @@ export const Dex = new (class implements ModdedDex {
 		let miscData = null;
 		let speciesid = species.id;
 		if (species.isTotem) speciesid = toID(name);
-		if (window.BattlePokemonSprites)
+		if (window.BattlePokemonSprites) {
+			console.log("miscData A");
 			miscData = BattlePokemonSprites[speciesid];
-		if (!miscData && window.BattlePokemonSpritesBW)
+		}
+
+		if (!miscData && window.BattlePokemonSpritesBW) {
+			console.log("miscData B");
 			miscData = BattlePokemonSpritesBW[speciesid];
-		if (!miscData) miscData = {};
+		}
+
+		if (!miscData) {
+			console.log("miscData C");
+			miscData = {};
+		}
 
 		if (miscData.num !== 0 && miscData.num > -5000) {
 			let baseSpeciesid = toID(species.baseSpecies);
@@ -872,6 +886,7 @@ export const Dex = new (class implements ModdedDex {
 			spriteData.url += dir + "/" + name + ".png";
 		}
 
+		console.log("Is no scale? ", !options.noScale);
 		if (!options.noScale) {
 			if (graphicsGen > 4) {
 				// no scaling
@@ -887,6 +902,7 @@ export const Dex = new (class implements ModdedDex {
 			}
 			if (spriteData.gen <= 2) spriteData.y += 2;
 		}
+
 		if (isDynamax && !options.noScale) {
 			spriteData.w *= 2;
 			spriteData.h *= 2;

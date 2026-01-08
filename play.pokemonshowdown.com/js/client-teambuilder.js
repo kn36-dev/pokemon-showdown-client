@@ -8,7 +8,7 @@
 		title: 'Teambuilder',
 		initialize: function () {
 			teams = Storage.teams;
-			console.log({ teamsInInitialize: teams });
+			// console.log({ teamsInInitialize: teams });
 
 			// left menu
 			this.$el.addClass('ps-room-light').addClass('scrollable');
@@ -116,7 +116,7 @@
 				var team = this.curTeam;
 				this.curTeam = null;
 				Storage.activeSetList = this.curSetList = null;
-				console.log("saveTeam triggered when clicking back: ", team);
+				// console.log("saveTeam triggered when clicking back: ", team);
 				Storage.saveTeam(team);
 			} else {
 				return;
@@ -154,7 +154,7 @@
 		formatResources: {},
 		update: function () {
 			teams = Storage.teams;
-			console.log({ teamsInUpdate: teams });
+			// console.log({ teamsInUpdate: teams });
 			if (this.curTeam) {
 				if (this.curTeam.format && !this.formatResources[this.curTeam.format]) {
 					this.tryLoadFormatResource(this.curTeam.format);
@@ -392,7 +392,7 @@
 		},
 		updateTeamList: function (resetScroll) {
 			var teams = Storage.teams;
-			console.log({ teamsInUpdateTeamList: teams });
+			// console.log({ teamsInUpdateTeamList: teams });
 			var buf = '';
 
 			// teampane
@@ -460,7 +460,7 @@
 
 					var team = teams[i];
 
-					console.log("team at index ", i, ": ", team);
+					// console.log("team at index ", i, ": ", team);
 
 					if (team && !team.team && team.team !== '') {
 						team = null;
@@ -708,7 +708,7 @@
 					team.folder = name;
 					if (window.nodewebkit) Storage.saveTeam(team);
 				}
-				console.log("saveTeams called at line 702 in client-teambuilder");
+				// console.log("saveTeams called at line 702 in client-teambuilder");
 				if (!window.nodewebkit) Storage.saveTeams();
 				self.selectFolder(name + '/');
 			} });
@@ -729,7 +729,7 @@
 				if (addName) team.name = oldFolder + ' ' + team.name;
 				if (window.nodewebkit) Storage.saveTeam(team);
 			}
-			console.log("saveTeams called at line 723 in client-teambuilder");
+			// console.log("saveTeams called at line 723 in client-teambuilder");
 			if (!window.nodewebkit) Storage.saveTeams();
 			this.selectFolder('/');
 		},
@@ -773,7 +773,7 @@
 			if (this.curTeam.format.includes('legends')) {
 				this.curTeam.dex = Dex.mod('gen9legendsou');
 			}
-			console.log("this.curSetList assigned in 770");
+			// console.log("this.curSetList assigned in 770");
 			Storage.activeSetList = this.curSetList = Storage.unpackTeam(this.curTeam.team);
 			this.curTeamIndex = i;
 			this.update();
@@ -821,7 +821,7 @@
 			Storage.deleteAllTeams();
 			Storage.importTeam(this.$('.teamedit textarea').val(), true);
 			teams = Storage.teams;
-			console.log({ teamsInSaveBackup: teams });
+			// console.log({ teamsInSaveBackup: teams });
 			Storage.saveAllTeams();
 			for (var room in app.rooms) {
 				var selection = app.rooms[room].$('button.teamselect').val();
@@ -975,7 +975,7 @@
 			// }
 			var contents = Storage.exportTeam(team.team, team.gen).replace(/\n/g, '\r\n');
 			var downloadurl = "text/plain:" + filename + ":" + urlprefix + encodeURIComponent(window.btoa(unescape(encodeURIComponent(contents))));
-			console.log(downloadurl);
+			// console.log(downloadurl);
 			dataTransfer.setData("DownloadURL", downloadurl);
 
 			app.dragging = e.currentTarget;
@@ -1253,7 +1253,7 @@
 					if (this.curSetList.length < this.curTeam.capacity && this.deletedSet && i === this.deletedSetLoc) {
 						buf += '<li><button name="undeleteSet" class="button"><i class="fa fa-undo"></i> Undo Delete</button></li>';
 					}
-					console.log("renderSet called at line 1248 in client-teambuilder: ", this.curSetList[i], i);
+					// console.log("renderSet called at line 1248 in client-teambuilder: ", this.curSetList[i], i);
 					buf += this.renderSet(this.curSetList[i], i);
 				}
 				if (this.deletedSet && i === this.deletedSetLoc) {
@@ -1392,7 +1392,7 @@
 
 			var types = BattleFusion.getFusionTypes(species, set.fusionSet);
 			// var types = species.types;
-			console.log({ setInRenderSet: set, speciesInRenderSet: species, types: types });
+			// console.log({ setInRenderSet: set, speciesInRenderSet: species, types: types });
 			if (types) {
 				for (var i = 0; i < types.length; i++) buf += Dex.getTypeIcon(types[i]);
 			}
@@ -1422,7 +1422,7 @@
 				totalBaseStats += baseStatValues[statIndex];
 			}
 
-			var weight = BattleFusion.getCombinedWeight(set);
+			var weight = BattleFusion.getFusionWeight(set);
 			// Total base stat and weight
 			buf += '<span class="statrow statrow-head"><label style="width: 113px; text-align:left">' + "BST: " + totalBaseStats + " KG: " + weight + '</label><em>' + (!isLetsGo ? 'EV' : 'AV') + '</em></span>';
 
@@ -1492,7 +1492,7 @@
 					}
 				});
 			} else {
-				console.log("this.curSetList assigned in 1477");
+				// console.log("this.curSetList assigned in 1477");
 				Storage.activeSetList = this.curSetList = Storage.importTeam(text);
 				this.back();
 			}
@@ -1563,8 +1563,8 @@
 							typeTable = typeTable.filter(function (type) {
 								return species.types.includes(type);
 							});
-							console.log("addPokemon: species: ", species);
-							console.log("addPokemon: typeTable: ", species);
+							// console.log("addPokemon: species: ", species);
+							// console.log("addPokemon: typeTable: ", species);
 
 							if (!typeTable.length) break;
 						}
@@ -1572,7 +1572,7 @@
 				}
 				if (typeTable.length === 1) {
 					this.search.engine.addFilter(['type', typeTable[0]]);
-					console.log("addPokemon: search filters: ", this.search.engine.filters);
+					// console.log("addPokemon: search filters: ", this.search.engine.filters);
 					this.search.filters = this.search.engine.filters;
 					this.search.find('');
 				}
@@ -1596,7 +1596,7 @@
 			if (this.curTeam) {
 				Storage.saveTeam(this.curTeam);
 			} else {
-				console.log("saveTeams called at line 1568 in client-teambuilder");
+				// console.log("saveTeams called at line 1568 in client-teambuilder");
 				Storage.saveTeams();
 			}
 		},
@@ -1614,7 +1614,7 @@
 			if (window.BattleFormats && BattleFormats[format] && BattleFormats[format].battleFormat) {
 				format = BattleFormats[format].battleFormat;
 			}
-			console.log("What is the team sent? ", this.curTeam);
+			// console.log("What is the team sent? ", this.curTeam);
 			app.sendTeam(this.curTeam, function () {
 				app.send('/vtm ' + format);
 			});
@@ -2111,7 +2111,7 @@
 				totalBaseStats += baseStatValues[statIndex];
 			}
 
-			var weight = BattleFusion.getCombinedWeight(set);
+			var weight = BattleFusion.getFusionWeight(set);
 			// Total base stat and weight
 			var buf = '<span class="statrow statrow-head"><label style="width: 113px; text-align:left">' + "BST: " + totalBaseStats + " KG: " + weight + '</label><em>' + (supportsEVs ? 'EV' : 'AV') + '</em></span>';
 
@@ -3126,7 +3126,7 @@
 			fusion: 'pokemon'
 		},
 		chartClick: function (e) {
-			console.log("Chart Click!");
+			// console.log("Chart Click!");
 			if (this.search.addFilter(e.currentTarget)) {
 				var curChart = this.$('input[name=' + this.curChartName + ']');
 				// if we were searching for the filter, remove it
@@ -3163,7 +3163,7 @@
 			this.chartSet(val, true);
 		},
 		chartKeydown: function (e) {
-			console.log("Chart Key Down!");
+			// console.log("Chart Key Down!");
 			var modifier = (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.cmdKey);
 			if (e.keyCode === 13 || (e.keyCode === 9 && !modifier)) { // enter/tab
 				if (!(this.curChartType in this.searchChartTypes)) return;
@@ -3224,11 +3224,11 @@
 			}
 		},
 		chartKeyup: function () {
-			console.log("Chart KeyUp!");
+			// console.log("Chart KeyUp!");
 			this.updateChart();
 		},
 		chartFocus: function (e) {
-			console.log("Chart Focus!");
+			// console.log("Chart Focus!");
 			var $target = $(e.currentTarget);
 			var name = e.currentTarget.name;
 			var type = this.chartTypes[name];
@@ -3258,7 +3258,7 @@
 			this.updateChart(false, wasIncomplete);
 		},
 		chartChange: function (e, selectNext) {
-			console.log("Chart Change!: ", e.currentTarget.value);
+			// console.log("Chart Change!: ", e.currentTarget.value);
 			var name = e.currentTarget.name;
 			if (this.curChartName !== name) return;
 			var id = toID(e.currentTarget.value);
@@ -3399,7 +3399,7 @@
 			}
 		},
 		chartSet: function (val, selectNext) {
-			console.log("Chart Set!: ", val);
+			// console.log("Chart Set!: ", val);
 			var inputName = this.curChartName;
 			var input = this.$('input[name=' + inputName + ']');
 			if (this.chartSetCustom(input.val())) return;
@@ -3600,7 +3600,7 @@
 		setPokemon: function (val, selectNext) {
 			var set = this.curSet;
 			var species = this.curTeam.dex.species.get(val);
-			console.log("Value in setPokemon: ", val);
+			// console.log("Value in setPokemon: ", val);
 			if (!species.exists || set.species === species.name) {
 				if (selectNext) this.$('input[name=item]').select();
 				return;
@@ -3713,15 +3713,15 @@
 		},
 		swapFusion: function () {
 			if (!this.curSet.fusionSet || !this.curSet.fusionSet.baseSpecies) return;
-			console.log("Before set fusion");
+			// console.log("Before set fusion");
 
 			var headPokemonSpecies = this.curSet.species;
 			var bodyPokemonSpecies = this.curSet.fusionSet.baseSpecies;
 
 			this.setFusion(headPokemonSpecies);
-			console.log("After set fusion, ready to set pokemon");
+			// console.log("After set fusion, ready to set pokemon");
 			this.setPokemon(bodyPokemonSpecies);
-			console.log("After set pokemon");
+			// console.log("After set pokemon");
 			this.updateSetTop();
 		},
 

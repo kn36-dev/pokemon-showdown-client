@@ -167,7 +167,7 @@
 		this.renderedIndex = i;
 	};
 	Search.prototype.setType = function (qType, format, set, cur) {
-		console.log({ qType: qType });
+		// console.log({ qType: qType });
 		this.engine.setType(qType, format, set);
 		this.filters = this.engine.filters;
 		this.sortCol = this.engine.sortCol;

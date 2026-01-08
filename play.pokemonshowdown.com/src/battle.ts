@@ -112,6 +112,8 @@ export class Pokemon implements PokemonDetails, PokemonHealth {
 
 	sprite: PokemonSprite;
 
+	fusion: string;
+
 	constructor(data: PokemonDetails, side: Side) {
 		this.side = side;
 		this.speciesForme = data.speciesForme;
@@ -124,6 +126,7 @@ export class Pokemon implements PokemonDetails, PokemonHealth {
 		this.ident = data.ident;
 		this.terastallized = data.terastallized || '';
 		this.searchid = data.searchid;
+		this.fusion = data.fusion || '';
 
 		this.sprite = side.battle.scene.addPokemonSprite(this);
 	}
@@ -985,6 +988,7 @@ export interface PokemonDetails {
 	ident: string;
 	terastallized: string;
 	searchid: string;
+	fusion?: string; // String obtained from |poke|p1|Lucario, L50, M, fusion: Greninja|
 }
 export interface PokemonHealth {
 	hp: number;
@@ -1151,6 +1155,7 @@ export class Battle {
 	} = {}) {
 		this.id = options.id || '';
 
+		// console.log("DEBUG: Battle scene initialized for ID:", options.id); // ADD THIS
 		if (options.$frame && options.$logFrame) {
 			this.scene = new BattleScene(this, options.$frame, options.$logFrame);
 		} else if (!options.$frame && !options.$logFrame) {
@@ -3215,6 +3220,13 @@ export class Battle {
 		output.ident = (!isTeamPreview ? pokemonid : '');
 		output.searchid = (!isTeamPreview ? `${pokemonid}|${details}` : '');
 		let splitDetails = details.split(', ');
+
+		// NEW CODE START
+		if (splitDetails[splitDetails.length - 1].startsWith('fusion:')) {
+			output.fusion = splitDetails[splitDetails.length - 1].slice(8).trim();
+			splitDetails.pop();
+		}
+
 		if (splitDetails[splitDetails.length - 1].startsWith('tera:')) {
 			output.terastallized = splitDetails[splitDetails.length - 1].slice(5);
 			splitDetails.pop();
@@ -3626,6 +3638,7 @@ export class Battle {
 			this.p2.clearPokemon();
 			break;
 		}
+		// Pokemon is sent to the frontend
 		case 'poke': {
 			let pokemon = this.rememberTeamPreviewPokemon(args[1], args[2]);
 			if (args[3] === 'mail') {

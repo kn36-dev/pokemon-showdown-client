@@ -442,7 +442,7 @@ Storage.onMessage = function ($e) {
 		};
 		if (oldTeams) {
 			Storage.teams = Storage.teams.concat(oldTeams);
-			console.log("saveTeams called at line 448 in storage");
+			// console.log("saveTeams called at line 448 in storage");
 			Storage.saveTeams();
 			localStorage.removeItem('showdown_teams');
 		}
@@ -652,7 +652,7 @@ Storage.loadRemoteTeams = function (after) {
 				var mons = team.team.split(',').map(function (mon) {
 					return { species: mon };
 				});
-				console.log("packTeam in storage at line 657");
+				// console.log("packTeam in storage at line 657");
 				team.team = Storage.packTeam(mons);
 				Storage.teams.unshift(team);
 			}
@@ -677,7 +677,7 @@ Storage.loadPackedTeams = function (buffer) {
 Storage.saveTeams = function () {
 	try {
 		if (window.localStorage) {
-			console.log("packAllTeams called at line 682");
+			// console.log("packAllTeams called at line 682");
 			localStorage.setItem('showdown_teams', Storage.packAllTeams(this.teams));
 			Storage.cantSave = false;
 		}
@@ -701,17 +701,17 @@ Storage.getPackedTeams = function () {
 };
 
 Storage.saveTeam = function () {
-	console.log("saveTeams called at line 707 in storage");
+	// console.log("saveTeams called at line 707 in storage");
 	this.saveTeams();
 };
 
 Storage.deleteTeam = function () {
-	console.log("saveTeams called at line 712 in storage");
+	// console.log("saveTeams called at line 712 in storage");
 	this.saveTeams();
 };
 
 Storage.saveAllTeams = function () {
-	console.log("saveTeams called at line 717in storage");
+	// console.log("saveTeams called at line 717in storage");
 	this.saveTeams();
 };
 
@@ -734,7 +734,7 @@ Storage.unpackAllTeams = function (buffer) {
 				format = format.slice(0, -4);
 				capacity = 24;
 			}
-			console.log("packTeam in storage at line 734");
+			// console.log("packTeam in storage at line 734");
 			return {
 				name: oldTeam.name || '',
 				format: format,
@@ -1136,7 +1136,7 @@ Storage.unpackTeam = function (buf) {
 		i = j + 1;
 	}
 
-	console.log({ team: team });
+	// console.log({ team: team });
 
 	return team;
 };
@@ -1185,7 +1185,7 @@ Storage.getTeamIcons = function (team) {
 		// app.rooms.teambuilder.curSetList because the teambuilder
 		// room may have been closed by the time we need to get
 		// a packed team.
-		console.log("packTeam in storage at line 1174");
+		// console.log("packTeam in storage at line 1174");
 		team.team = Storage.packTeam(Storage.activeSetList);
 		if ('teambuilder' in app.rooms) {
 			return Storage.packedTeamIcons(team.team);
@@ -1199,10 +1199,10 @@ Storage.getTeamIcons = function (team) {
 };
 
 Storage.getPackedTeam = function (team) {
-	console.log("first line in getPackedTeam: ", team);
+	// console.log("first line in getPackedTeam: ", team);
 	if (!team) return null;
 	if (team.iconCache === '!') {
-		console.log("iconCache block in getPackedTeam: ");
+		// console.log("iconCache block in getPackedTeam: ");
 		// see the same case in Storage.getTeamIcons
 		team.team = Storage.packTeam(Storage.activeSetList);
 		if (!('teambuilder' in app.rooms)) {
@@ -1212,10 +1212,10 @@ Storage.getPackedTeam = function (team) {
 	}
 	if (typeof team.team !== 'string') {
 		// should never happen
-		console.log("packTeam in storage at line 1200");
+		// console.log("packTeam in storage at line 1200");
 		team.team = Storage.packTeam(team.team);
 	}
-	console.log("final line in getPackedTeam: ", team.team);
+	// console.log("final line in getPackedTeam: ", team.team);
 	return team.team;
 };
 
@@ -1227,7 +1227,7 @@ Storage.importTeam = function (buffer, teams) {
 		Storage.teams = [];
 		teams = Storage.teams;
 	} else if (text.length === 1 || (text.length === 2 && !text[1])) {
-		console.log("After importing whole team storage line 1230");
+		// console.log("After importing whole team storage line 1230");
 		return Storage.unpackTeam(text[0]);
 	}
 	for (var i = 0; i < text.length; i++) {
@@ -1251,7 +1251,7 @@ Storage.importTeam = function (buffer, teams) {
 			}
 			if (teams.length && typeof teams[teams.length - 1].team !== 'string') {
 
-				console.log("After importing whole team storage line 1254");
+				// console.log("After importing whole team storage line 1254");
 				teams[teams.length - 1].team = Storage.packTeam(teams[teams.length - 1].team);
 			}
 			var slashIndex = line.lastIndexOf('/');
@@ -1274,7 +1274,7 @@ Storage.importTeam = function (buffer, teams) {
 			curSet = null;
 			teams.push(Storage.unpackLine(line));
 		} else if (!curSet) {
-			console.log("Line 1277");
+			// console.log("Line 1277");
 			curSet = { name: '', species: '', gender: '' };
 			team.push(curSet);
 			var atIndex = line.lastIndexOf(' @ ');
@@ -1387,7 +1387,7 @@ Storage.importTeam = function (buffer, teams) {
 		}
 	}
 	if (teams && teams.length && typeof teams[teams.length - 1].team !== 'string') {
-		console.log("After importing whole team storage line 1386");
+		// console.log("After importing whole team storage line 1386");
 		teams[teams.length - 1].team = Storage.packTeam(teams[teams.length - 1].team);
 	}
 	return team;
@@ -1712,7 +1712,7 @@ Storage.nwLoadTeamFile = function (filename, localApp) {
 	}
 	fs.readFile(this.dir + 'Teams/' + filename, function (err, data) {
 		if (!err) {
-			console.log("packTeam in storage at line 1690");
+			// console.log("packTeam in storage at line 1690");
 			self.teams.push({
 				name: line,
 				format: format,
@@ -1814,7 +1814,7 @@ Storage.nwSaveTeam = function (team) {
 Storage.nwSaveTeams = function () {
 	// should never happen
 	try {
-		console.log("nwSaveTeams called: " + new Error().stack);
+		// console.log("nwSaveTeams called: " + new Error().stack);
 	} catch (e) {}
 };
 

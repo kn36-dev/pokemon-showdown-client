@@ -136,6 +136,7 @@
 			this.updateControls();
 		},
 		add: function (data) {
+			// console.trace({ dataInAddMethodInBattleRoom: data });
 			if (!data) return;
 			if (data.substr(0, 6) === '|init|') {
 				return this.init(data);

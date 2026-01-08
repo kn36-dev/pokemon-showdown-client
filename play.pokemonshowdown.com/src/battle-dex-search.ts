@@ -90,7 +90,7 @@ export class DexSearch {
 	getTypedSearch(searchType: SearchType | '', format = '' as ID, speciesOrSet: ID | Dex.PokemonSet = '' as ID) {
 		if (!searchType) return null;
 
-		console.log({ searchTypeInGetTypedSearch: searchType });
+		// console.log({ searchTypeInGetTypedSearch: searchType });
 
 		switch (searchType) {
 		case 'pokemon': return new BattlePokemonSearch('pokemon', format, speciesOrSet);
@@ -128,7 +128,7 @@ export class DexSearch {
 			this.filters = null;
 			this.sortCol = null;
 		}
-		console.log({ searchTypeInSetType: searchType });
+		// console.log({ searchTypeInSetType: searchType });
 		this.typedSearch = this.getTypedSearch(searchType, format, speciesOrSet);
 		if (this.typedSearch) this.dex = this.typedSearch.dex;
 	}
@@ -718,7 +718,7 @@ abstract class BattleTypedSearch<T extends SearchType> {
 
 		this.species = '' as ID;
 		this.set = null;
-		console.log({ inBattleDexConstructor: speciesOrSet });
+		// console.log({ inBattleDexConstructor: speciesOrSet });
 		if (typeof speciesOrSet === 'string') {
 			if (speciesOrSet) this.species = speciesOrSet;
 		} else {
@@ -1449,7 +1449,7 @@ class BattleItemSearch extends BattleTypedSearch<'item'> {
 			const item = this.dex.items.get(row[1]);
 			return !item.megaStone;
 		});
-		console.log({ resultsInGetBaseResults: results });
+		// console.log({ resultsInGetBaseResults: results });
 		const speciesSpecific: SearchRow[] = [];
 		const abilitySpecific: SearchRow[] = [];
 		const abilityItem = {
