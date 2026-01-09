@@ -214,8 +214,8 @@ export function toName(name: any) {
 }
 
 export interface SpriteData {
-	w: number;
-	h: number;
+	w: number; // current
+	h: number; // current
 	y?: number;
 	gen?: number;
 	url?: string;
@@ -228,6 +228,11 @@ export interface SpriteData {
 	// Addition
 	isFusion?: boolean;
 	fallbackUrl?: string;
+	fusionW?: number;
+	fusionH?: number;
+
+	defaultW?: number;
+	defaultH?: number;
 }
 
 export interface TeambuilderSpriteData {
@@ -680,7 +685,7 @@ export const Dex = new (class implements ModdedDex {
 			mod?: string,
 			dynamax?: boolean,
 		} = { gen: 6 }
-	) {
+	): SpriteData {
 		const mechanicsGen = options.gen || 6;
 		let isDynamax = !!options.dynamax;
 		if (pokemon instanceof Pokemon) {
@@ -704,7 +709,7 @@ export const Dex = new (class implements ModdedDex {
 		const species = Dex.species.get(pokemon);
 		// Gmax sprites are already extremely large, so we don't need to double.
 		if (species.name.endsWith("-Gmax")) isDynamax = false;
-		let spriteData = {
+		let spriteData: SpriteData = {
 			gen: mechanicsGen,
 			w: 96,
 			h: 96,
@@ -739,7 +744,7 @@ export const Dex = new (class implements ModdedDex {
 		//     (eg. Darmanitan in graphicsGen 2) then we go up gens until it exists.
 		//
 		let graphicsGen = mechanicsGen;
-		console.log({ graphicsGen });
+		// console.log({ graphicsGen });
 		if (Dex.prefs("nopastgens")) graphicsGen = 6;
 		if (Dex.prefs("bwgfx") && graphicsGen >= 6) graphicsGen = 5;
 		spriteData.gen = Math.max(graphicsGen, Math.min(species.gen, 5));
@@ -760,17 +765,17 @@ export const Dex = new (class implements ModdedDex {
 		let speciesid = species.id;
 		if (species.isTotem) speciesid = toID(name);
 		if (window.BattlePokemonSprites) {
-			console.log("miscData A");
+			// console.log("miscData A");
 			miscData = BattlePokemonSprites[speciesid];
 		}
 
 		if (!miscData && window.BattlePokemonSpritesBW) {
-			console.log("miscData B");
+			// console.log("miscData B");
 			miscData = BattlePokemonSpritesBW[speciesid];
 		}
 
 		if (!miscData) {
-			console.log("miscData C");
+			// console.log("miscData C");
 			miscData = {};
 		}
 
@@ -817,32 +822,32 @@ export const Dex = new (class implements ModdedDex {
 
 		if (options.shiny && mechanicsGen > 1) dir += "-shiny";
 
-		// April Fool's 2014
-		if (Dex.afdMode || options.afd) {
-			// Explicit false check above means AFD will be off if the user disables it - no matter what
-			dir = "afd" + dir;
-			spriteData.url += dir + "/" + name + ".png";
-			// Duplicate code but needed to make AFD tinymax work
-			// April Fool's 2020
-			if (isDynamax && !options.noScale) {
-				spriteData.w *= 0.25;
-				spriteData.h *= 0.25;
-				spriteData.y += -22;
-			} else if (species.isTotem && !options.noScale) {
-				spriteData.w *= 0.5;
-				spriteData.h *= 0.5;
-				spriteData.y += -11;
-			}
-			return spriteData;
-		}
+		// // April Fool's 2014
+		// if (Dex.afdMode || options.afd) {
+		// 	// Explicit false check above means AFD will be off if the user disables it - no matter what
+		// 	dir = "afd" + dir;
+		// 	spriteData.url += dir + "/" + name + ".png";
+		// 	// Duplicate code but needed to make AFD tinymax work
+		// 	// April Fool's 2020
+		// 	if (isDynamax && !options.noScale) {
+		// 		spriteData.w *= 0.25;
+		// 		spriteData.h *= 0.25;
+		// 		spriteData.y += -22;
+		// 	} else if (species.isTotem && !options.noScale) {
+		// 		spriteData.w *= 0.5;
+		// 		spriteData.h *= 0.5;
+		// 		spriteData.y += -11;
+		// 	}
+		// 	return spriteData;
+		// }
 
-		// Mod Cries
-		if (options.mod) {
-			spriteData.cryurl = `sprites/${options.mod}/audio/${toID(
-				species.baseSpecies
-			)}`;
-			spriteData.cryurl += ".mp3";
-		}
+		// // Mod Cries
+		// if (options.mod) {
+		// 	spriteData.cryurl = `sprites/${options.mod}/audio/${toID(
+		// 		species.baseSpecies
+		// 	)}`;
+		// 	spriteData.cryurl += ".mp3";
+		// }
 
 		let animatedSprite = false;
 		if (!Dex.prefs("noanim") && !Dex.prefs("nogif") && spriteData.gen >= 5) {
@@ -863,7 +868,8 @@ export const Dex = new (class implements ModdedDex {
 				dir = animDir + "ani" + dir;
 				spriteData.w = animationData[facing].w;
 				spriteData.h = animationData[facing].h;
-				spriteData.url += dir + "/" + name + ".gif";
+				// spriteData.url += dir + "/" + name + ".gif";
+				spriteData.url = (spriteData.url ?? "") + dir + "/" + name + ".gif";
 				animatedSprite = true;
 				break;
 			}
@@ -883,35 +889,43 @@ export const Dex = new (class implements ModdedDex {
 				name += "-f";
 			}
 
-			spriteData.url += dir + "/" + name + ".png";
+			spriteData.url = (spriteData.url ?? "") + dir + "/" + name + ".png";
 		}
 
-		console.log("Is no scale? ", !options.noScale);
+		// console.log("Is no scale? ", !options.noScale);
 		if (!options.noScale) {
 			if (graphicsGen > 4) {
 				// no scaling
 			} else if (spriteData.isFrontSprite) {
 				spriteData.w *= 2;
 				spriteData.h *= 2;
-				spriteData.y += -16;
+				// spriteData.y += -16;
+				spriteData.y = (spriteData.y ?? 0) - 16;
+				// spriteData.url = (spriteData.url ?? "") + dir + "/" + name + ".png";
 			} else {
 				// old gen backsprites are multiplied by 1.5x by the 3D engine
 				spriteData.w *= 2 / 1.5;
 				spriteData.h *= 2 / 1.5;
-				spriteData.y += -11;
+				// spriteData.y += -11;
+				spriteData.y = (spriteData.y ?? 0) - 11;
 			}
-			if (spriteData.gen <= 2) spriteData.y += 2;
+			if (spriteData.gen <= 2) spriteData.y = (spriteData.y ?? 0) + 2;
 		}
 
 		if (isDynamax && !options.noScale) {
 			spriteData.w *= 2;
 			spriteData.h *= 2;
-			spriteData.y += -22;
+			spriteData.y = (spriteData.y ?? 0) - 22;
 		} else if (species.isTotem && !options.noScale) {
 			spriteData.w *= 1.5;
 			spriteData.h *= 1.5;
-			spriteData.y += -11;
+			spriteData.y = (spriteData.y ?? 0) - 11;
 		}
+
+		spriteData.fusionW = 96;
+		spriteData.fusionH = 96;
+		spriteData.defaultH = spriteData.h;
+		spriteData.defaultW = spriteData.w;
 
 		return spriteData;
 	}

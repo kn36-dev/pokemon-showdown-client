@@ -132,7 +132,8 @@ export const BattleSound = new class {
 		const effect = this.getSound(url);
 		if (effect) {
 			effect.volume = volume / 100;
-			effect.play();
+			// Removed errors in browser for now
+			// effect.play();
 		}
 	}
 

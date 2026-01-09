@@ -350,6 +350,7 @@ export class BattleScene implements BattleSceneStub {
 	 * The display property is passed through if it exists.
 	 */
 	pos(loc: ScenePos, obj: SpriteData) {
+
 		loc = {
 			x: 0,
 			y: 0,
@@ -372,11 +373,20 @@ export class BattleScene implements BattleSceneStub {
 		top += (135 - 245) * ((loc.z!) / 200);
 		left += Math.floor(loc.x! * scale);
 		top -= Math.floor(loc.y! * scale /* - loc.x * scale / 4 */);
+
+		console.log({ obj });
 		let width = Math.floor(obj.w * scale * loc.xscale!);
 		let height = Math.floor(obj.h * scale * loc.yscale!);
 		let hoffset = Math.floor((obj.h - (obj.y || 0) * 2) * scale * loc.yscale!);
 		left -= Math.floor(width / 2);
 		top -= Math.floor(hoffset / 2);
+
+		// // [DEBUG LOG] Trace Fusion Dimensions
+		// if ((obj as any).isFusion) {
+		// 	console.log(`[Scene.pos] Fusion Render: BaseW=${obj.w} BaseH=${obj.h} | CSS W=${width} H=${height}`);
+		// 	// Inside the (obj as any).isFusion check
+		// 	console.log(`[DEBUG-DIM] Rendering ${String(obj.url)} | Internal Base: ${obj.w}x${obj.h} | Calculated CSS: ${width}x${height}`);
+		// }
 
 		let pos: JQuery.PlainObject = {
 			left,
@@ -386,6 +396,11 @@ export class BattleScene implements BattleSceneStub {
 			opacity: loc.opacity,
 		};
 		if (loc.display) pos.display = loc.display;
+
+		// if ((obj as any).isFusion) {
+		// 	// Added Pokemon name and 'obj' reference check to see which object instance is being used
+		// 	console.log(`[Scene.pos] Fusion Render: BaseW=${obj.w} BaseH=${obj.h} | CSS W=${width} H=${height} | Pokemon=${(obj as any).pokemonName || 'Unknown'}`);
+		// }
 		return pos;
 	}
 	/**
@@ -817,6 +832,7 @@ export class BattleScene implements BattleSceneStub {
 		}
 		this.rebuildTooltips();
 	}
+
 	rebuildTooltips() {
 		let tooltipBuf = '';
 		const tooltips = this.battle.gameType === 'freeforall' ? {
@@ -863,9 +879,6 @@ export class BattleScene implements BattleSceneStub {
 				if (pokemon.speciesForme === 'Ludicolo') ludicoloCount++;
 				if (pokemon.speciesForme === 'Lombre') lombreCount++;
 
-				// Check getSpriteData here
-				console.log({ pokemonInTeamPreview: pokemon });
-
 				// Base Pokemon
 				let spriteData = Dex.getSpriteData(pokemon, !!spriteIndex, {
 					gen: this.gen,
@@ -876,18 +889,18 @@ export class BattleScene implements BattleSceneStub {
 				// 1. Capture Base Dimensions (for fallback)
 				const baseW = spriteData.w;
 				const baseH = spriteData.h;
+				const baseFusionW = spriteData.fusionW;
+				const baseFusionH	=	spriteData.fusionH;
 
 				let y = 0;
 				let x = 0;
 
 				if (spriteIndex) {
-					console.log("In Sprite Index");
 					y = 48 + 50 + 3 * (i + 6 - side.pokemon.length);
-					x = 48 + 180 + 50 * (i + 6 - side.pokemon.length);
+					x = 48 + 180 + 65 * (i + 6 - side.pokemon.length);
 				} else {
-					console.log("Outside Sprite Index");
 					y = 48 + 200 + 3 * i;
-					x = 48 + 100 + 50 * i;
+					x = 48 + 100 + 65 * i;
 				}
 
 				if (textBuf) textBuf += ' / ';
@@ -897,20 +910,15 @@ export class BattleScene implements BattleSceneStub {
 				const baseId = toID(pokemon.speciesForme);
 				const fusionId = toID((pokemon as any).fusion);
 
-				const fallbackUrl = spriteData.url;
-				(spriteData as SpriteData).fallbackUrl = spriteData.url;
+				// const fallbackUrl = spriteData.url;
+				spriteData.fallbackUrl = spriteData.url;
+				// console.log({ urlInTeamPreview: spriteData.url });
 
 				if (fusionId) {
-					// // Set the new Fusion URL
-					// spriteData.url = Dex.resourcePrefix + `sprites/home-centered-fusion/${baseId}/${baseId}-${fusionId}.png`;
 					spriteData.url = Dex.resourcePrefix + `sprites/home-centered-fusion/${baseId}/${baseId}-${fusionId}.png`;
-					spriteData.w = 96;
-					spriteData.h = 96;
 				}
 
 				let url = spriteData.url;
-
-				console.log({ url, spriteWidth: spriteData.w, spriteHeight: spriteData.h });
 
 				// Determine if we need to flip the image horizontally
 				// spriteIndex 0 is usually the player's side (bottom-left)
@@ -918,17 +926,17 @@ export class BattleScene implements BattleSceneStub {
 
 				// if (this.paused) url.replace('/xyani', '/xy').replace('.gif', '.png');
 
-				buf += `<img src="${url}"
-				data-fallback-src="${fallbackUrl}"
+				buf += `<img src="${url ?? ""}"
+				data-fallback-src="${spriteData.fallbackUrl ?? ""}"
 				data-base-w="${baseW}"
 				data-base-h="${baseH}"
 				data-cx="${x}"
 				data-cy="${y}"
-				width="${spriteData.w}"
-				height="${spriteData.h}"
+				width="${baseFusionW ?? 0}"
+				height="${baseFusionH ?? 0}"
 				style="position:absolute;
-				top:${Math.floor(y - spriteData.h / 2)}px;
-				left:${Math.floor(x - spriteData.w / 2)}px;
+				top:${Math.floor(y - (baseFusionH ?? 0) / 2)}px;
+				left:${Math.floor(x - (baseFusionW ?? 0) / 2)}px;
 				${flipTransform}" />`;
 
 				buf2 += `<div style="position:absolute;top:${y + 45}px;left:${x - 40}px;width:80px;font-size:10px;text-align:center;color:#FFF;">`;
@@ -967,6 +975,7 @@ export class BattleScene implements BattleSceneStub {
 				const cy = parseInt($img.attr('data-cy') || '0');
 
 				const errorHandler = function () {
+					// console.log("Blurgh error handler");
 					// Prevent infinite loops and remove the attribute
 					$img.off('error');
 					if (fallback) {
@@ -1209,17 +1218,13 @@ export class BattleScene implements BattleSceneStub {
 			gen: this.gen,
 			mod: this.mod,
 		});
-		// const sprite = new PokemonSprite(Dex.getSpriteData(pokemon, pokemon.side.isFar, {
-		// 	gen: this.gen,
-		// 	mod: this.mod,
-		// }), {
-		// 	x: pokemon.side.x,
-		// 	y: pokemon.side.y,
-		// 	z: pokemon.side.z,
-		// 	opacity: 0,
-		// }, this, pokemon.side.isFar);
 
-		// console.log({ spriteData });
+		// 2. Capture Base Dimensions for fallback
+		const baseW = spriteData.w;
+		const baseH = spriteData.h;
+		const baseFusionW = spriteData.fusionW;
+		const baseFusionH = spriteData.fusionH;
+
 		// 2. Check for Fusion and override URL
 		if (pokemon.fusion) {
 			// Construct filename: "Base-Fusion.png" (e.g. "lucario-greninja.png")
@@ -1228,24 +1233,107 @@ export class BattleScene implements BattleSceneStub {
 			const fusionId = toID((pokemon as any).fusion);
 
 			// Save the original URL for fallback
-			(spriteData as SpriteData).fallbackUrl = spriteData.url;
+			spriteData.fallbackUrl = spriteData.url;
 			// Set the new Fusion URL
 			spriteData.url = Dex.resourcePrefix + `sprites/home-centered-fusion/${baseId}/${baseId}-${fusionId}.png`;
-			(spriteData as SpriteData).isFusion = true;
+			spriteData.isFusion = true;
+
+			// if (spriteData.fusionW) spriteData.w = spriteData.fusionW;
+			// if (spriteData.fusionH) spriteData.h = spriteData.fusionH;
+
+			// Force 96x96 dimensions for fusions
+			// spriteData.w = 96;
+			// spriteData.h = 96;
 			// console.log({ spriteDataInFusionBlock: spriteData });
 		}
 
-		// KN: RIGHT HERE
 		const sprite = new PokemonSprite(spriteData, {
 			x: pokemon.side.x,
 			y: pokemon.side.y,
 			z: pokemon.side.z,
 			opacity: 0,
 		}, this, pokemon.side.isFar);
-		// console.log({ sprite });
 
 		if (sprite.$el) this.$sprites[+pokemon.side.isFar].append(sprite.$el);
-		// console.log({ returnedSprite: sprite });
+
+		// if (sprite.$el) {
+		// 	const $img = sprite.$el;
+		// 	if ($img.length) {
+		// 		$img.css({
+		// 			'transform': !pokemon.side.isFar ? 'scaleX(-1)' : 'none',
+		// 		}).attr({
+		// 			'data-fallback-src': spriteData.fallbackUrl,
+		// 			'data-base-w': baseW,
+		// 			'data-base-h': baseH,
+		// 			// We use 0 for cx/cy here because PokemonSprite handles
+		// 			// its own relative positioning via the 'sprite' object logic
+		// 		});
+
+		// 		// 5. Replicate the Error Handler logic
+		// 		const errorHandler = () => {
+		// 			$img.off('error');
+		// 			// Mark fusion as permanently failed for this instance to prevent re-syncing to 96x96
+		// 			// (spriteData as any).isFusion = false;
+		// 			// (spriteData as any).fusionFailed = true;
+
+		// 			const fallback = $img.attr('data-fallback-src');
+		// 			if (fallback) {
+		// 				console.log('[addPokemonSprite] Error Handler Triggered. Reverting to:', fallback);
+
+		// 				// [INVESTIGATION LOG 5] Memory vs DOM check
+		// 				console.log(`[DEBUG] addPokemonSprite.errorHandler: Memory(spriteData)=${spriteData.w}x${spriteData.h} | DOM(attr)=${$img.attr('data-base-w') ?? 'N/A'}x${$img.attr('data-base-h') ?? 'N/A'}`);
+
+		// 				console.log(`[addPokemonSprite] Reverting Dimensions from ${spriteData.w}x${spriteData.h} to ${baseW}x${baseH}`);
+
+		// 				// CRITICAL FIX: Update the SpriteData object in memory
+		// 				// This ensures Scene.pos() uses 64x101 instead of 96x96
+		// 				// Retrieve the original base dimensions stored on the element
+		// 				const newBaseW = parseInt($img.attr('data-base-w') || '64');
+		// 				const newBaseH = parseInt($img.attr('data-base-h') || '101');
+
+		// 				console.log(`[addPokemonSprite] Reverting Dimensions from ${spriteData.w}x${spriteData.h} to ${newBaseH}x${baseH}`);
+
+		// 				spriteData.url = fallback;
+		// 				spriteData.w = newBaseW; // The base dimensions captured at the start of addPokemonSprite
+		// 				spriteData.h = newBaseH;
+
+		// 				// Force the CSS to update immediately to prevent 144x144 squashing
+		// 				$img.attr('src', fallback).css({
+		// 					width: `${newBaseW}px`,
+		// 					height: `${newBaseH}px`,
+		// 				});
+
+		// 				// // Force a re-calculation of the position with the new base dimensions
+		// 				// this.syncPokemonSpriteData(pokemon);
+
+		// 				$img.attr({
+		// 					'src': fallback,
+		// 					'width': newBaseW,
+		// 					'height': newBaseH,
+		// 				}).css({
+		// 					'width': `${newBaseW}px`,
+		// 					'height': `${newBaseH}px`,
+		// 					'transform': 'none',
+		// 				});
+
+		// 				// Note: We don't manually recalculate top/left here because
+		// 				// PokemonSprite uses internal offsets that auto-adjust
+		// 				// when the img dimensions change.
+		// 			}
+		// 		};
+
+		// 		$img.on('error', errorHandler);
+
+		// 		// Race condition check
+		// 		if (($img[0] as HTMLImageElement).complete && ($img[0] as HTMLImageElement).naturalWidth === 0) {
+		// 			errorHandler();
+		// 		}
+		// 	}
+
+		// 	this.$sprites[+pokemon.side.isFar].append(sprite.$el);
+		// }
+
+		// console.log({ addPokemonSpriteReturned: sprite });
 		return sprite;
 	}
 
@@ -1887,6 +1975,7 @@ export class Sprite {
 				url: '',
 			};
 		}
+		// console.log("sp in constructor: ", sp);
 		this.sp = sp;
 
 		this.x = pos.x;
@@ -2070,6 +2159,7 @@ export class PokemonSprite extends Sprite {
 	effects: { [id: string]: Sprite[] } = {};
 
 	constructor(spriteData: SpriteData | null, pos: InitScenePos, scene: BattleScene, isFrontSprite: boolean) {
+		// console.trace({ spriteDataInConstructor: spriteData });
 		super(spriteData, pos, scene);
 		this.cryurl = this.sp.cryurl;
 		this.isFrontSprite = isFrontSprite;
@@ -2077,23 +2167,30 @@ export class PokemonSprite extends Sprite {
 		// console.log({ isSpriteDataFusion: spriteData?.isFusion });
 
 		// NEW CODE: Fallback logic
-		if (spriteData?.isFusion && spriteData.url) {
-			this.$el.on('error', () => {
-				console.log("Error triggered for fusion:", spriteData.url);
+		// if (spriteData?.isFusion && spriteData.url) {
+		// 	this.$el.on('error', () => {
+		// 		console.log("Error triggered for fusion:", spriteData.url);
 
-				// 1. Remove the handler immediately to prevent infinite loops if fallback also fails
-				this.$el.off('error');
+		// 		// 1. Remove the handler immediately to prevent infinite loops if fallback also fails
+		// 		this.$el.off('error');
 
-				// 2. Apply fallback
-				if (spriteData.fallbackUrl) {
-					this.$el.attr('src', spriteData.fallbackUrl);
-				}
-			});
+		// 		// 2. Apply fallback
+		// 		if (spriteData.fallbackUrl) {
+		// 			this.$el.attr('src', spriteData.fallbackUrl);
+		// 		}
+		// 	});
 
-			// CRITICAL FIX: Re-assign the src attribute to force the browser
-			// to acknowledge the new listener we just added.
-			this.$el.attr('src', spriteData.url);
-		}
+		// 	// CRITICAL FIX: Re-assign the src attribute to force the browser
+		// 	// to acknowledge the new listener we just added.
+		// 	this.$el.attr('src', spriteData.url);
+		// }
+
+		// console.log("[PokemonSprite.init] Initializing");
+		// console.log("[PokemonSprite.init] url: ", spriteData?.url);
+		// const dimensions = `${spriteData?.w ?? 0} x ${spriteData?.h ?? 0}`;
+		// console.log("[PokemonSprite.init] dimensions: ", dimensions);
+		// const isFusion = spriteData && spriteData.isFusion && spriteData.isFusion === true;
+		// console.log("[PokemonSprite.init] isFusion: ", isFusion);
 	}
 	override destroy() {
 		if (this.$el) this.$el.remove();
@@ -2163,7 +2260,7 @@ export class PokemonSprite extends Sprite {
 			mod: this.scene.mod,
 		});
 		this.subsp = subsp;
-		this.$sub = $('<img src="' + subsp.url + '" style="display:block;opacity:0;position:absolute"' + (subsp.pixelated ? ' class="pixelated"' : '') + ' />');
+		this.$sub = $('<img src="' + (subsp.url ?? "") + '" style="display:block;opacity:0;position:absolute"' + (subsp.pixelated ? ' class="pixelated"' : '') + ' />');
 		this.scene.$spritesFront[+this.isFrontSprite].append(this.$sub);
 		this.isSubActive = true;
 		if (instant) {
@@ -2269,7 +2366,6 @@ export class PokemonSprite extends Sprite {
 		this.$sub = null;
 	}
 	reset(pokemon: Pokemon) {
-		console.log("Is reset called?");
 		this.clearEffects();
 
 		if (pokemon.volatiles.formechange || pokemon.volatiles.dynamax || pokemon.volatiles.terastallize) {
@@ -2282,6 +2378,28 @@ export class PokemonSprite extends Sprite {
 			this.sp = this.oldsp;
 			this.oldsp = null;
 		}
+
+		// 1. Capture original dimensions immediately
+		const defaultW = this.sp.defaultW;
+		const defaultH = this.sp.defaultH;
+
+		const fusionW = this.sp.fusionW;
+		const fusionH = this.sp.fusionH;
+
+		const baseW = this.sp.w;
+		const baseH = this.sp.h;
+		// const originalUrl = this.sp.url;
+
+		// if (pokemon.fusion) {
+		// 	const baseId = toID(pokemon.speciesForme);
+		// 	const fusionId = toID((pokemon as any).fusion);
+		// 	(this.sp as any).isFusion = true;
+		// 	(this.sp as any).fallbackUrl = originalUrl;
+		// 	this.sp.url = Dex.resourcePrefix + `sprites/home-centered-fusion/${baseId}/${baseId}-${fusionId}.png`;
+
+		// 	if ((this.sp as any).fusionW) this.sp.w = (this.sp as any).fusionW;
+		// 	if ((this.sp as any).fusionH) this.sp.h = (this.sp as any).fusionH;
+		// }
 
 		// I can rant for ages about how jQuery sucks, necessitating this function
 		// The short version is: after calling elem.finish() on an animating
@@ -2303,16 +2421,39 @@ export class PokemonSprite extends Sprite {
 			// 2. Attach the error listener BEFORE setting the src
 			if ((this.sp as any).isFusion) {
 				$newEl.on('error', () => {
-					console.log("Reset Error triggered for:", this.sp.url);
+					// console.log("REVERT TRIGGERED: Current sp dimensions before revert:", this.sp.w, this.sp.h);
 					$newEl.off('error');
 					if ((this.sp as any).fallbackUrl) {
+						// console.log("fallbackURL triggered?");
 						$newEl.attr('src', (this.sp as any).fallbackUrl);
+						$newEl.attr('width', defaultW ?? 0);
+						$newEl.attr('height', defaultH ?? 0);
+
+						(this.sp as any).tryAddingThis = 'huehue';
+
+						// Revert dimensions and URL in the sprite object
+						// this.sp.w = baseW;
+						// this.sp.h = baseH;
+						// this.sp.url = (this.sp as any).fallbackUrl;
+
+						// console.log("REVERT DONE: New sp dimensions:", this.sp.w, this.sp.h);
+						// // Force log the element style to see what CSS thinks
+						// console.log("Element CSS dimensions:", $newEl.css('width'), $newEl.css('height'));
+
+						// // Update current element immediately
+						// $newEl.css({ width: baseW, height: baseH });
+
+						// // 4. Force a reposition using the Side's coordinates
+						// // We pass the side's position and the updated sprite data (sp)
+						// // const coords = this.scene.pos(pokemon.side, this.sp);
+						// // $newEl.css(coords);
 					}
 				});
 			}
 
 			// 3. Now set the src, triggering the browser fetch
-			$newEl.attr('src', this.sp.url!);
+			// console.log("current url: ", this.sp.url);
+			$newEl.attr({ 'src': this.sp.url! });
 
 			this.$el = $newEl;
 		}
@@ -2328,6 +2469,8 @@ export class PokemonSprite extends Sprite {
 		if (this.$el) this.scene.$sprites[+this.isFrontSprite].append(this.$el);
 		this.recalculatePos(pokemon.slot);
 		this.resetStatbar(pokemon);
+
+		// const newSpriteData = { ...this.sp, w: fusionW ?? 0, h: fusionH ?? 0 };
 		this.$el.css(this.scene.pos({
 			display: 'block',
 			x: this.x,
@@ -2750,7 +2893,7 @@ export class PokemonSprite extends Sprite {
 			}
 		}
 		// Constructing here gives us 300ms extra time to preload the new sprite
-		let $newEl = $('<img src="' + sp.url + '" style="display:block;opacity:0;position:absolute"' + (sp.pixelated ? ' class="pixelated"' : '') + ' />');
+		let $newEl = $('<img src="' + (sp.url ?? "") + '" style="display:block;opacity:0;position:absolute"' + (sp.pixelated ? ' class="pixelated"' : '') + ' />');
 		$newEl.css(this.scene.pos({
 			x: this.x,
 			y: this.y,

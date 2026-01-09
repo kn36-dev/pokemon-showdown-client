@@ -347,6 +347,7 @@ class BattlePanel extends PSRoomPanel<BattleRoom> {
 	override componentDidMount() {
 		const room = this.props.room;
 		const $elem = $(this.base!);
+		console.log("new battle created at componentDidMount");
 		const battle = (room.battle ||= new Battle({
 			id: room.id as any,
 			$frame: $elem.find('.battle'),

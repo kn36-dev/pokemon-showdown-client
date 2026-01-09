@@ -25,6 +25,7 @@
 			this.$foeHint = this.$el.find('.foehint');
 
 			BattleSound.setMute(Dex.prefs('mute'));
+
 			this.battle = new Battle({
 				id: this.id,
 				$frame: this.$battle,

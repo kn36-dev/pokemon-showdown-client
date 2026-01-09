@@ -1155,7 +1155,6 @@ export class Battle {
 	} = {}) {
 		this.id = options.id || '';
 
-		// console.log("DEBUG: Battle scene initialized for ID:", options.id); // ADD THIS
 		if (options.$frame && options.$logFrame) {
 			this.scene = new BattleScene(this, options.$frame, options.$logFrame);
 		} else if (!options.$frame && !options.$logFrame) {
