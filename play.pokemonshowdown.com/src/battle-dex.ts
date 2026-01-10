@@ -688,6 +688,10 @@ export const Dex = new (class implements ModdedDex {
 	): SpriteData {
 		const mechanicsGen = options.gen || 6;
 		let isDynamax = !!options.dynamax;
+
+		const fusionId = toID((pokemon as any).fusion);
+		const baseId = toID((pokemon as any).speciesForme);
+
 		if (pokemon instanceof Pokemon) {
 			if (pokemon.volatiles.transform) {
 				options.shiny = pokemon.volatiles.transform[2];
@@ -822,32 +826,37 @@ export const Dex = new (class implements ModdedDex {
 
 		if (options.shiny && mechanicsGen > 1) dir += "-shiny";
 
-		// // April Fool's 2014
-		// if (Dex.afdMode || options.afd) {
-		// 	// Explicit false check above means AFD will be off if the user disables it - no matter what
-		// 	dir = "afd" + dir;
-		// 	spriteData.url += dir + "/" + name + ".png";
-		// 	// Duplicate code but needed to make AFD tinymax work
-		// 	// April Fool's 2020
-		// 	if (isDynamax && !options.noScale) {
-		// 		spriteData.w *= 0.25;
-		// 		spriteData.h *= 0.25;
-		// 		spriteData.y += -22;
-		// 	} else if (species.isTotem && !options.noScale) {
-		// 		spriteData.w *= 0.5;
-		// 		spriteData.h *= 0.5;
-		// 		spriteData.y += -11;
-		// 	}
-		// 	return spriteData;
-		// }
+		// w and h cals should happen here because multiplications happen below
+		spriteData.fusionW = 96;
+		spriteData.fusionH = 96;
 
-		// // Mod Cries
-		// if (options.mod) {
-		// 	spriteData.cryurl = `sprites/${options.mod}/audio/${toID(
-		// 		species.baseSpecies
-		// 	)}`;
-		// 	spriteData.cryurl += ".mp3";
-		// }
+		// April Fool's 2014
+		if (Dex.afdMode || options.afd) {
+			// Explicit false check above means AFD will be off if the user disables it - no matter what
+			dir = "afd" + dir;
+			spriteData.url = (spriteData.url ?? "") + dir + "/" + name + ".png";
+			// Duplicate code but needed to make AFD tinymax work
+			// April Fool's 2020
+			if (isDynamax && !options.noScale) {
+				spriteData.w *= 0.25;
+				spriteData.h *= 0.25;
+				spriteData.y = (spriteData.y ?? 0) - 22;
+			} else if (species.isTotem && !options.noScale) {
+				spriteData.w *= 0.5;
+				spriteData.h *= 0.5;
+				spriteData.y = (spriteData.y ?? 0) - 11;
+
+			}
+			return spriteData;
+		}
+
+		// Mod Cries
+		if (options.mod) {
+			spriteData.cryurl = `sprites/${options.mod}/audio/${toID(
+				species.baseSpecies
+			)}`;
+			spriteData.cryurl += ".mp3";
+		}
 
 		let animatedSprite = false;
 		if (!Dex.prefs("noanim") && !Dex.prefs("nogif") && spriteData.gen >= 5) {
@@ -922,10 +931,13 @@ export const Dex = new (class implements ModdedDex {
 			spriteData.y = (spriteData.y ?? 0) - 11;
 		}
 
-		spriteData.fusionW = 96;
-		spriteData.fusionH = 96;
 		spriteData.defaultH = spriteData.h;
 		spriteData.defaultW = spriteData.w;
+		spriteData.fallbackUrl = spriteData.url;
+
+		if (fusionId) {
+			spriteData.url = Dex.resourcePrefix + `sprites/home-centered-fusion/${baseId}/${baseId}-${fusionId}.png`;
+		}
 
 		return spriteData;
 	}
