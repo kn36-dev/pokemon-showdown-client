@@ -374,19 +374,11 @@ export class BattleScene implements BattleSceneStub {
 		left += Math.floor(loc.x! * scale);
 		top -= Math.floor(loc.y! * scale /* - loc.x * scale / 4 */);
 
-		// console.log({ obj });
 		let width = Math.floor(obj.w * scale * loc.xscale!);
 		let height = Math.floor(obj.h * scale * loc.yscale!);
 		let hoffset = Math.floor((obj.h - (obj.y || 0) * 2) * scale * loc.yscale!);
 		left -= Math.floor(width / 2);
 		top -= Math.floor(hoffset / 2);
-
-		// // [DEBUG LOG] Trace Fusion Dimensions
-		// if ((obj as any).isFusion) {
-		// 	console.log(`[Scene.pos] Fusion Render: BaseW=${obj.w} BaseH=${obj.h} | CSS W=${width} H=${height}`);
-		// 	// Inside the (obj as any).isFusion check
-		// 	console.log(`[DEBUG-DIM] Rendering ${String(obj.url)} | Internal Base: ${obj.w}x${obj.h} | Calculated CSS: ${width}x${height}`);
-		// }
 
 		let pos: JQuery.PlainObject = {
 			left,
@@ -395,12 +387,12 @@ export class BattleScene implements BattleSceneStub {
 			height,
 			opacity: loc.opacity,
 		};
+		// if (obj.rawHTML?.includes('protect')) {
+		// 	console.log(`[DEBUG Protect] Input Z: ${loc.z ?? "no z in loc"}, X: ${loc.x ?? "no x in loc"}, Y: ${loc.y ?? 'no y in loc'}`);
+		// 	console.log(`[DEBUG Protect] Calculated CSS -> Top: ${top}, Left: ${left}, Width: ${width}, Height: ${height}`);
+		// }
 		if (loc.display) pos.display = loc.display;
 
-		// if ((obj as any).isFusion) {
-		// 	// Added Pokemon name and 'obj' reference check to see which object instance is being used
-		// 	console.log(`[Scene.pos] Fusion Render: BaseW=${obj.w} BaseH=${obj.h} | CSS W=${width} H=${height} | Pokemon=${(obj as any).pokemonName || 'Unknown'}`);
-		// }
 		return pos;
 	}
 	/**
@@ -1188,68 +1180,26 @@ export class BattleScene implements BattleSceneStub {
 
 	addPokemonSprite(pokemon: Pokemon) {
 		// 1. Get the default sprite data (Base Pokemon)
-		// KN: getSpriteData called here
 		const spriteData = Dex.getSpriteData(pokemon, pokemon.side.isFar, {
 			gen: this.gen,
 			mod: this.mod,
 		});
 
-		// ADD THIS LINE to ensure the data carries the fusion flag
 		spriteData.isFusion = !!pokemon.fusion;
 		spriteData.w = spriteData.fusionW ?? 0;
 		spriteData.h = spriteData.fusionH ?? 0;
 
-		console.log(`[SPRITE-DEBUG] ${Date.now()} | addPokemonSprite | ${pokemon.speciesForme} | Fusion? ${spriteData.isFusion ? 'YES' : 'NO'}`);
-		// 2. Capture Base Dimensions for fallback
-		// const baseW = spriteData.w;
-		// const baseH = spriteData.h;
-		// const baseFusionW = spriteData.fusionW;
-		// const baseFusionH = spriteData.fusionH;
-		// const originalW = spriteData.defaultW;
-		// const originalH = spriteData.defaultH;
-
-		// 2. Check for Fusion and override URL
-		// if (pokemon.fusion) {
-		// 	// Construct filename: "Base-Fusion.png" (e.g. "lucario-greninja.png")
-		// 	// Ensure you convert names to IDs (lowercase, no spaces)
-		// 	const baseId = toID(pokemon.speciesForme);
-		// 	const fusionId = toID((pokemon as any).fusion);
-
-		// 	// Save the original URL for fallback
-		// 	spriteData.fallbackUrl = spriteData.url;
-		// 	// Set the new Fusion URL
-		// 	spriteData.url = Dex.resourcePrefix + `sprites/home-centered-fusion/${baseId}/${baseId}-${fusionId}.png`;
-		// 	spriteData.isFusion = true;
-
-		// 	spriteData.fusionW = 96;
-		// 	spriteData.fusionH = 96;
-		// 	spriteData.defaultW = originalW;
-		// 	spriteData.defaultH = originalH;
-		// 	spriteData.w = spriteData.fusionW;
-		// 	spriteData.h = spriteData.fusionH;
-		// }
-
 		// 5. Replicate the Error Handler logic
 		const errorHandler = (el: JQuery, sp: SpriteData) => {
 			el.off('error');
-			// [LOG] 2. External Error Handler Triggered
-			console.log(`[SPRITE-DEBUG] ${Date.now()} | addPokemonSprite.errorHandler | ${pokemon.speciesForme} | TRIGGERED | Fallback exists? ${String(!!el.attr('data-fallback-src'))}`); const fallback = el.attr('data-fallback-src');
+			const fallback = el.attr('data-fallback-src');
 			if (fallback) {
 				const newBaseW = parseInt(el.attr('data-base-w') || '0');
 				const newBaseH = parseInt(el.attr('data-base-h') || '0');
 
-				// [LOG] 3. External Error Handler Swap
-				console.log(`[SPRITE-DEBUG] ${Date.now()} | addPokemonSprite.errorHandler | ${pokemon.speciesForme} | SWAPPING TO: ${newBaseW}x${newBaseH} | URL: ${fallback}`);
-
 				const newSp: SpriteData = { ...sp, w: newBaseW, h: newBaseH };
-				// sprite.sp.w = newBaseW;
-				// sprite.sp.h = newBaseH;
-				// sprite.sp.url = fallback;
-
-				// console.log("this.sp updated in addPokemonSprite error handler");
 				sp = newSp;
 
-				// // Force the CSS to update immediately to prevent 144x144 squashing
 				el.attr('src', fallback).css({ 'transform': 'none' });
 			}
 		};
@@ -1262,25 +1212,6 @@ export class BattleScene implements BattleSceneStub {
 		}, this, pokemon.side.isFar, errorHandler);
 
 		if (sprite.$el) this.$sprites[+pokemon.side.isFar].append(sprite.$el);
-
-		// if (sprite.$el) {
-		// 	const $img = sprite.$el;
-		// 	if ($img.length) {
-		// 		$img.css({
-		// 			'transform': !pokemon.side.isFar ? 'scaleX(-1)' : 'none',
-		// 		}).attr({
-		// 			'data-fallback-src': spriteData.fallbackUrl,
-		// 			'data-base-w': originalW,
-		// 			'data-base-h': originalH,
-		// 			'width': baseFusionW,
-		// 			'height': baseFusionH,
-		// 			// We use 0 for cx/cy here because PokemonSprite handles
-		// 			// its own relative positioning via the 'sprite' object logic
-		// 		});
-		// 	}
-
-		// 	this.$sprites[+pokemon.side.isFar].append(sprite.$el);
-		// }
 
 		return sprite;
 	}
@@ -1921,23 +1852,6 @@ export class Sprite {
 				`<img src="${sp.url!}" style="display:none;position:absolute"${sp.pixelated ? ' class="pixelated"' : ''} />`;
 			this.$el = $(rawHTML);
 
-			// if (errorHandler) {
-			// 	this.$el.on("error", () => errorHandler(this.$el, this.sp));
-			// }
-
-			// this.loadPromise = new Promise(resolve => {
-			// 	this.$el.on('load', () => resolve());
-			// 	this.$el.on('error', () => {
-			// 		// This will be specialized in PokemonSprite,
-			// 		// but we resolve here to prevent hangs.
-			// 		resolve();
-			// 	});
-
-			// 	// Race condition: check if already complete/failed
-			// 	const img = this.$el[0] as HTMLImageElement;
-			// 	if (img?.complete) resolve();
-			// });
-
 			this.loadPromise = new Promise(resolve => {
 				this.$el.one('load', () => resolve());
 				this.$el.one('error', () => resolve()); // Resolve to prevent hanging
@@ -1958,6 +1872,17 @@ export class Sprite {
 		this.y = pos.y;
 		this.z = pos.z;
 		if (pos.opacity !== 0 && spriteData) this.$el.css(scene.pos(pos, sp));
+
+		// if (spriteData?.rawHTML?.includes('protect')) {
+		// 	console.log(`[DEBUG Protect] Sprite Created at: x=${this.x}, y=${this.y}, z=${this.z}`);
+		// }
+
+		// if (pos.opacity !== 0 && spriteData) {
+		// 	this.loadPromise.then(() => {
+		// 		// Use this.sp instead of the passed spriteData to ensure we have the resolved values
+		// 		this.$el.css(scene.pos(this, this.sp));
+		// 	});
+		// }
 
 		if (!spriteData) {
 			this.delay = function () { return this; };
@@ -1994,9 +1919,18 @@ export class Sprite {
 		// This method is called synchronously but the actual animation
 		// is added to the jQuery queue. It will use this.sp at the
 		// time of execution.
+
 		const targetCss = this.scene.posT(end, this.sp, transition, this);
 		this.$el.animate(targetCss, end.time || 500);
 		return this;
+
+		// this.loadPromise.then(() => {
+		// 	// Use this.sp instead of the passed spriteData to ensure we have the resolved values
+
+		// 	const targetCss = this.scene.posT(end, this.sp, transition, this);
+		// 	this.$el.animate(targetCss, end.time || 500);
+		// 	return this;
+		// });
 	}
 }
 
@@ -2151,44 +2085,15 @@ export class PokemonSprite extends Sprite {
 		this.cryurl = this.sp.cryurl;
 		this.isFrontSprite = isFrontSprite;
 
-		// if (this.$el?.length) {
-		// 	this.$el.css({
-		// 		'transform': !isFrontSprite ? 'scaleX(-1)' : 'none',
-		// 	}).attr({
-		// 		'data-fallback-src': spriteData?.fallbackUrl,
-		// 		'data-base-w': spriteData?.defaultW,
-		// 		'data-base-h': spriteData?.defaultH,
-		// 		// We use 0 for cx/cy here because PokemonSprite handles
-		// 		// its own relative positioning via the 'sprite' object logic
-		// 	});
-		// }
-
-		// [LOG] 4. Constructor Start
-		// We cast 'this.sp as any' to access the Pokemon name if available, or assume based on context
-		const logName = (this.sp as any).name || "UnknownPokemon";
-		console.log(`[SPRITE-DEBUG] ${Date.now()} | PokemonSprite.constructor | ${logName} | IsFusion: ${String(this.sp.isFusion)} | HasFallback: ${String(!!this.sp.fallbackUrl)}`);
-
 		// FIX: Correctly identify fusion and set up the Wait Promise
 		const isFusion = !!(this.sp.isFusion || (this.sp.url?.includes('fusion')));
 
-		console.log(`[VERIFY-DEBUG] Constructor | ${this.sp.url ?? 'no url in this.sp'} | Detected Fusion: ${String(isFusion)} | Fallback URL: ${this.sp.fallbackUrl ?? 'no fallbackUrl in this.sp'}`);
 		if (isFusion && this.sp.fallbackUrl) {
 			this.loadPromise = new Promise(resolve => {
-				const handleLoad = () => {
+				const handleLoad = () => resolve();
 
-					// [LOG] 8. Promise Resolve
-					console.log(`[SPRITE-DEBUG] ${Date.now()} | PokemonSprite.Promise | ${logName} | RESOLVED. Final URL: ${this.sp.url ?? 'this.sp has no url'} | Dims: ${this.sp.w}x${this.sp.h}`);
-					resolve();
-				};
-
-				this.$el.one('load', () => {
-					// [LOG] 6. Initial Load Success
-					console.log(`[SPRITE-DEBUG] ${Date.now()} | PokemonSprite.Promise | ${logName} | Loaded successfully (First Attempt).`);
-					handleLoad();
-				});
+				this.$el.one('load', handleLoad);
 				this.$el.one('error', () => {
-					// [LOG] 7. Error Caught inside Promise
-					console.log(`[SPRITE-DEBUG] ${Date.now()} | PokemonSprite.Promise | ${logName} | ERROR CAUGHT (404). Starting Fallback Sequence.`);
 					this.$el.off('error');
 
 					// 1. SWAP DATA
@@ -2196,27 +2101,12 @@ export class PokemonSprite extends Sprite {
 					this.sp.w = this.sp.defaultW || 96;
 					this.sp.h = this.sp.defaultH || 96;
 					this.sp.isFusion = false;
-					// console.log(`[SPRITE-DEBUG] ${Date.now()} | PokemonSprite.Promise | ${logName} | Data Swapped: ${oldW}x${oldH} -> ${this.sp.w}x${this.sp.h}`);
 
 					// 2. Trigger the new load
 					this.$el.attr('src', this.sp.url);
-					// this.$el.one('load', handleLoad);
-					// this.$el.one('error', handleLoad);
-
-					// if (!this.isFrontSprite) {
-					// 	this.$el.css('transform', 'scaleX(-1)');
-					// }
-
 					// 3. Only resolve after the fallback image is ready
-					this.$el.one('load', () => {
-						console.log(`[SPRITE-DEBUG] ${Date.now()} | PokemonSprite.Promise | ${logName} | Fallback Image Loaded.`);
-						handleLoad();
-					});
-					this.$el.one('error', () => {
-						console.log(`[SPRITE-DEBUG] ${Date.now()} | PokemonSprite.Promise | ${logName} | Fallback Image FAILED.`);
-						handleLoad();
-					}
-					); // Resolve anyway to avoid hanging
+					this.$el.one('load', handleLoad);
+					this.$el.one('error', handleLoad); // Resolve anyway to avoid hanging
 				});
 
 				// Manual check for immediate failures
@@ -2276,7 +2166,6 @@ export class PokemonSprite extends Sprite {
 		if (!this.oldsp) return;
 		let sp = this.oldsp;
 		this.cryurl = sp.cryurl;
-		// console.log("this.sp updated in removeTransform");
 		this.sp = sp;
 		this.oldsp = null;
 
@@ -2403,20 +2292,12 @@ export class PokemonSprite extends Sprite {
 		this.$sub = null;
 	}
 	reset(pokemon: Pokemon) {
-		// [LOG] 12. Reset Called
-		console.log(`[SPRITE-DEBUG] ${Date.now()} | Reset | ${pokemon.speciesForme} | Start.`);
 		this.clearEffects();
 
 		let currentSpriteData;
 
 		if (pokemon.volatiles.formechange || pokemon.volatiles.dynamax || pokemon.volatiles.terastallize) {
 			if (!this.oldsp) this.oldsp = this.sp;
-			// KN: getSpriteData called here
-			// this.sp = Dex.getSpriteData(pokemon, this.isFrontSprite, {
-			// 	gen: this.scene.gen,
-			// 	mod: this.scene.mod,
-			// });
-
 			currentSpriteData = Dex.getSpriteData(pokemon, this.isFrontSprite, {
 				gen: this.scene.gen,
 				mod: this.scene.mod,
@@ -2425,42 +2306,11 @@ export class PokemonSprite extends Sprite {
 			currentSpriteData.w = currentSpriteData?.fusionW ? currentSpriteData?.fusionW : 0;
 			currentSpriteData.h = currentSpriteData?.fusionH ? currentSpriteData?.fusionH : 0;
 
-			// console.log("this.sp updated in reset if");
 			this.sp = currentSpriteData;
 		} else if (this.oldsp) {
-			// console.log("this.sp updated in reset else if");
 			this.sp = this.oldsp;
-			// currentSpriteData = this.oldsp;
 			this.oldsp = null;
 		}
-
-		// 1. Capture original dimensions immediately
-		// const defaultW = this.sp.defaultW;
-		// const defaultH = this.sp.defaultH;
-
-		// const fusionW = this.sp.fusionW;
-		// const fusionH = this.sp.fusionH;
-
-		// const baseW = this.sp.w;
-		// const baseH = this.sp.h;
-		// const originalUrl = this.sp.url;
-		// if (currentSpriteData) {
-		// 	currentSpriteData.w = currentSpriteData?.fusionW ? currentSpriteData?.fusionW : 0;
-		// 	currentSpriteData.h = currentSpriteData?.fusionH ? currentSpriteData?.fusionH : 0;
-		// }
-
-		// this.sp =
-
-		// if (pokemon.fusion) {
-		// 	const baseId = toID(pokemon.speciesForme);
-		// 	const fusionId = toID((pokemon as any).fusion);
-		// 	(this.sp as any).isFusion = true;
-		// 	(this.sp as any).fallbackUrl = originalUrl;
-		// 	this.sp.url = Dex.resourcePrefix + `sprites/home-centered-fusion/${baseId}/${baseId}-${fusionId}.png`;
-
-		// 	if ((this.sp as any).fusionW) this.sp.w = (this.sp as any).fusionW;
-		// 	if ((this.sp as any).fusionH) this.sp.h = (this.sp as any).fusionH;
-		// }
 
 		// I can rant for ages about how jQuery sucks, necessitating this function
 		// The short version is: after calling elem.finish() on an animating
@@ -2482,46 +2332,19 @@ export class PokemonSprite extends Sprite {
 			// 2. Attach the error listener BEFORE setting the src
 			if (this.sp.isFusion) {
 				$newEl.on('error', () => {
-					// console.log("error handler in reset");
-					// console.log("REVERT TRIGGERED: Current sp dimensions before revert:", this.sp.w, this.sp.h);
 					$newEl.off('error');
 					const fallback = this.sp.fallbackUrl;
 					if (fallback) {
-						console.log(`[SPRITE-DEBUG] ${Date.now()} | Reset.ErrorHandler | ${pokemon.speciesForme} | Reverting to: ${fallback}`);
-						// console.log("fallbackURL triggered?");
 						$newEl.attr('src', fallback);
-						// $newEl.attr('width', this.sp.defaultW ?? 0);
-						// $newEl.attr('height', this.sp.defaultH ?? 0);
-
-						// (this.sp as any).tryAddingThis = 'huehue';
-
-						// Revert dimensions and URL in the sprite object
-						// this.sp.w = baseW;
-						// this.sp.h = baseH;
-						// this.sp.url = (this.sp as any).fallbackUrl;
-
-						// console.log("REVERT DONE: New sp dimensions:", this.sp.w, this.sp.h);
-						// // Force log the element style to see what CSS thinks
-						// console.log("Element CSS dimensions:", $newEl.css('width'), $newEl.css('height'));
-
-						// // Update current element immediately
-						// $newEl.css({ width: baseW, height: baseH });
-
-						// // 4. Force a reposition using the Side's coordinates
-						// // We pass the side's position and the updated sprite data (sp)
-						// // const coords = this.scene.pos(pokemon.side, this.sp);
-						// // $newEl.css(coords);
 					}
 				});
 			}
 
 			// 3. Now set the src, triggering the browser fetch
-			// console.log("current url: ", this.sp.url);
 			$newEl.attr({ 'src': this.sp.url! });
 
 			this.$el = $newEl;
 
-			console.log(`[SPRITE-DEBUG] ${Date.now()} | Reset | ${pokemon.speciesForme} | Element Recreated. Src set.`);
 		}
 
 		if (!pokemon.isActive()) {
@@ -2575,6 +2398,7 @@ export class PokemonSprite extends Sprite {
 		}
 	}
 	recalculatePos(slot: number) {
+		// this.loadPromise.then(() => {
 		let moreActive = this.scene.activeCount - 1;
 		let statbarOffset = 0;
 		const isFFA = this.scene.battle.gameType === 'freeforall';
@@ -2642,25 +2466,19 @@ export class PokemonSprite extends Sprite {
 				this.$el.appendTo(this.$el.parent());
 			}
 		}
+		// });
 	}
 	animSummon(pokemon: Pokemon, slot: number, instant?: boolean) {
 		if (!this.scene.animating) return;
-
-		console.log(`[SPRITE-DEBUG] ${Date.now()} | animSummon | ${pokemon.speciesForme} | Called. Appending to DOM.`);
 		this.scene.$sprites[+this.isFrontSprite].append(this.$el);
 
 		this.loadPromise.then(() => {
-			console.log(`[VERIFY-DEBUG] AnimStart | ${pokemon.speciesForme} | URL used: ${this.sp.url ?? 'no url in this.sp'} | W: ${this.sp.w} | Transform: ${!this.isFrontSprite && this.sp.isFusion ? 'FLIPPED' : 'NORMAL'}`); this.recalculatePos(slot);
-
+			this.recalculatePos(slot);
 			// Calculate if we need to flip
 			// Fusions are "Player" side (!isFrontSprite) and must be flipped
 			const needsFlip = !this.isFrontSprite && this.sp.isFusion;
 			const transformValue = needsFlip ? 'scaleX(-1)' : 'none';
 
-			// LOG: This will now show 'Fusion: true' if step 1 is done
-			console.log(`[ORIENTATION-FIX] ${pokemon.speciesForme} | Side: ${this.isFrontSprite ? 'OPP' : 'PLAYER'} | Fusion: ${String(this.sp.isFusion)} | Apply Flip: ${String(needsFlip)}`);
-
-			// 'z-index': (this.isFrontSprite ? 4-slot : 1+slot),
 			if (instant) {
 				this.$el.css('display', 'block');
 				this.animReset();
@@ -2941,7 +2759,6 @@ export class PokemonSprite extends Sprite {
 		} else if (!this.oldsp) {
 			this.oldsp = oldsp;
 		}
-		// console.log("this.sp updated in animTransform");
 		this.sp = sp;
 		this.cryurl = sp.cryurl;
 
