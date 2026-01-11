@@ -1866,13 +1866,22 @@ export class Sprite {
 			};
 			this.loadPromise = Promise.resolve();
 		}
+
 		this.sp = sp;
 
 		this.x = pos.x;
 		this.y = pos.y;
 		this.z = pos.z;
-		if (pos.opacity !== 0 && spriteData) this.$el.css(scene.pos(pos, sp));
+		this.loadPromise.then(() => {
 
+			if (pos.opacity !== 0 && spriteData) this.$el.css(scene.pos(pos, sp));
+
+		});
+
+		if (!spriteData) {
+			this.delay = function () { return this; };
+			this.anim = function () { return this; };
+		}
 		// if (spriteData?.rawHTML?.includes('protect')) {
 		// 	console.log(`[DEBUG Protect] Sprite Created at: x=${this.x}, y=${this.y}, z=${this.z}`);
 		// }
@@ -1884,10 +1893,6 @@ export class Sprite {
 		// 	});
 		// }
 
-		if (!spriteData) {
-			this.delay = function () { return this; };
-			this.anim = function () { return this; };
-		}
 	}
 
 	destroy() {
@@ -1920,17 +1925,17 @@ export class Sprite {
 		// is added to the jQuery queue. It will use this.sp at the
 		// time of execution.
 
-		const targetCss = this.scene.posT(end, this.sp, transition, this);
-		this.$el.animate(targetCss, end.time || 500);
+		// const targetCss = this.scene.posT(end, this.sp, transition, this);
+		// this.$el.animate(targetCss, end.time || 500);
+		// return this;
+
+		this.loadPromise.then(() => {
+		// Use this.sp instead of the passed spriteData to ensure we have the resolved values
+
+			const targetCss = this.scene.posT(end, this.sp, transition, this);
+			this.$el.animate(targetCss, end.time || 500);
+		});
 		return this;
-
-		// this.loadPromise.then(() => {
-		// 	// Use this.sp instead of the passed spriteData to ensure we have the resolved values
-
-		// 	const targetCss = this.scene.posT(end, this.sp, transition, this);
-		// 	this.$el.animate(targetCss, end.time || 500);
-		// 	return this;
-		// });
 	}
 }
 
@@ -2081,7 +2086,7 @@ export class PokemonSprite extends Sprite {
 		isFrontSprite: boolean,
 		errorHandler?: (el: JQuery, sp: SpriteData) => void) {
 
-		super(spriteData, pos, scene, errorHandler);
+		super(spriteData, pos, scene);
 		this.cryurl = this.sp.cryurl;
 		this.isFrontSprite = isFrontSprite;
 
@@ -2312,6 +2317,13 @@ export class PokemonSprite extends Sprite {
 			this.oldsp = null;
 		}
 
+		// [Analysis] Replay Fix: We must re-initialize loadPromise for the new image generation
+		// ensuring that subsequent calls (like recalculatePos) wait for this specific load.
+		let resolveLoad: () => void;
+		this.loadPromise = new Promise(resolve => {
+			resolveLoad = resolve;
+		});
+
 		// I can rant for ages about how jQuery sucks, necessitating this function
 		// The short version is: after calling elem.finish() on an animating
 		// element, there appear to be a grand total of zero ways to hide it
@@ -2329,22 +2341,51 @@ export class PokemonSprite extends Sprite {
 			// 1. Create the IMG tag WITHOUT the src attribute initially
 			const $newEl = $(`<img style="display:none;position:absolute"${this.sp.pixelated ? ' class="pixelated"' : ''} />`);
 
+			const handleLoad = () => {
+				console.log(`[PokemonSprite.reset] Image loaded for ${pokemon.name}. Src: ${this.sp.url ?? "no url in this.sp"}`);
+				resolveLoad();
+			};
+
 			// 2. Attach the error listener BEFORE setting the src
 			if (this.sp.isFusion) {
 				$newEl.on('error', () => {
 					$newEl.off('error');
+					console.log(`[PokemonSprite.reset] Image error for ${pokemon.name}. Attempting fallback...`);
 					const fallback = this.sp.fallbackUrl;
 					if (fallback) {
+					// Fallback logic specific to reset
+						this.sp.url = fallback;
+						this.sp.w = this.sp.defaultW || 96;
+						this.sp.h = this.sp.defaultH || 96;
+						this.sp.isFusion = false;
+
 						$newEl.attr('src', fallback);
+						// Re-attach load listener for the fallback
+						$newEl.one('load', handleLoad);
+						$newEl.one('error', handleLoad); // Resolve anyway to prevent hanging
+					} else {
+						handleLoad();
 					}
 				});
 			}
+
+			$newEl.one('load', handleLoad);
 
 			// 3. Now set the src, triggering the browser fetch
 			$newEl.attr({ 'src': this.sp.url! });
 
 			this.$el = $newEl;
 
+			// Immediate check for cached images
+			const img = this.$el[0] as HTMLImageElement;
+			if (img?.complete) {
+				if (img.naturalWidth === 0) this.$el.trigger('error');
+				else handleLoad();
+			}
+
+		} else {
+			// If no element exists, resolve immediately to unblock queue
+			resolveLoad!();
 		}
 
 		if (!pokemon.isActive()) {
@@ -2355,21 +2396,24 @@ export class PokemonSprite extends Sprite {
 			return;
 		}
 
-		if (this.$el) this.scene.$sprites[+this.isFrontSprite].append(this.$el);
-		this.recalculatePos(pokemon.slot);
-		this.resetStatbar(pokemon);
+		this.loadPromise.then(() => {
 
-		// const newSpriteData = { ...this.sp, w: fusionW ?? 0, h: fusionH ?? 0 };
-		this.$el.css(this.scene.pos({
-			display: 'block',
-			x: this.x,
-			y: this.y,
-			z: this.z,
-		}, this.sp));
+			if (this.$el) this.scene.$sprites[+this.isFrontSprite].append(this.$el);
+			this.recalculatePos(pokemon.slot);
+			this.resetStatbar(pokemon);
 
-		for (const id in pokemon.volatiles) this.addEffect(id as ID, true);
-		for (const id in pokemon.turnstatuses) this.addEffect(id as ID, true);
-		for (const id in pokemon.movestatuses) this.addEffect(id as ID, true);
+			// const newSpriteData = { ...this.sp, w: fusionW ?? 0, h: fusionH ?? 0 };
+			this.$el.css(this.scene.pos({
+				display: 'block',
+				x: this.x,
+				y: this.y,
+				z: this.z,
+			}, this.sp));
+
+			for (const id in pokemon.volatiles) this.addEffect(id as ID, true);
+			for (const id in pokemon.turnstatuses) this.addEffect(id as ID, true);
+			for (const id in pokemon.movestatuses) this.addEffect(id as ID, true);
+		});
 	}
 	animReset() {
 		if (!this.scene.animating) return;
@@ -2466,6 +2510,8 @@ export class PokemonSprite extends Sprite {
 				this.$el.appendTo(this.$el.parent());
 			}
 		}
+
+		console.log(`[PokemonSprite.recalculatePos] Pos calculated. X: ${this.x}, Y: ${this.y}, Slot: ${slot}`);
 		// });
 	}
 	animSummon(pokemon: Pokemon, slot: number, instant?: boolean) {
@@ -2567,41 +2613,45 @@ export class PokemonSprite extends Sprite {
 	}
 	animDragIn(pokemon: Pokemon, slot: number) {
 		if (!this.scene.animating) return;
-		this.scene.$sprites[+this.isFrontSprite].append(this.$el);
-		this.recalculatePos(slot);
 
-		// 'z-index': (this.isFrontSprite ? 4-slot : 1+slot),
-		this.$el.css(this.scene.pos({
-			display: 'block',
-			x: this.leftof(-100),
-			y: this.y,
-			z: this.z,
-			opacity: 0,
-		}, this.sp));
-		this.delay(300).anim({
-			x: this.x,
-			y: this.y,
-			z: this.z,
-			time: 400,
-		}, 'decel');
-		if (!!this.scene.animating && this.sp.shiny) BattleOtherAnims.shiny.anim(this.scene, [this]);
-		this.scene.waitFor(this.$el);
-		this.scene.timeOffset = 700;
+		this.loadPromise.then(() => {
 
-		this.resetStatbar(pokemon, true);
-		this.scene.updateSidebar(pokemon.side);
-		this.$statbar!.css({
-			display: 'block',
-			left: this.statbarLeft + (this.isFrontSprite ? -100 : 100),
-			top: this.statbarTop,
-			opacity: 0,
+			this.scene.$sprites[+this.isFrontSprite].append(this.$el);
+			this.recalculatePos(slot);
+
+			// 'z-index': (this.isFrontSprite ? 4-slot : 1+slot),
+			this.$el.css(this.scene.pos({
+				display: 'block',
+				x: this.leftof(-100),
+				y: this.y,
+				z: this.z,
+				opacity: 0,
+			}, this.sp));
+			this.delay(300).anim({
+				x: this.x,
+				y: this.y,
+				z: this.z,
+				time: 400,
+			}, 'decel');
+			if (!!this.scene.animating && this.sp.shiny) BattleOtherAnims.shiny.anim(this.scene, [this]);
+			this.scene.waitFor(this.$el);
+			this.scene.timeOffset = 700;
+
+			this.resetStatbar(pokemon, true);
+			this.scene.updateSidebar(pokemon.side);
+			this.$statbar!.css({
+				display: 'block',
+				left: this.statbarLeft + (this.isFrontSprite ? -100 : 100),
+				top: this.statbarTop,
+				opacity: 0,
+			});
+			this.$statbar!.delay(300).animate({
+				left: this.statbarLeft,
+				opacity: 1,
+			}, 400);
+
+			this.dogarsCheck(pokemon);
 		});
-		this.$statbar!.delay(300).animate({
-			left: this.statbarLeft,
-			opacity: 1,
-		}, 400);
-
-		this.dogarsCheck(pokemon);
 	}
 	animDragOut(pokemon: Pokemon) {
 		if (!this.scene.animating) return this.animUnsummon(pokemon, true);
@@ -2641,60 +2691,64 @@ export class PokemonSprite extends Sprite {
 	}
 	animUnsummon(pokemon: Pokemon, instant?: boolean) {
 		this.removeSub();
-		if (!this.scene.animating || instant) {
-			this.$el.hide();
-			if (this.$statbar) {
-				this.$statbar.remove();
-				this.$statbar = null;
+
+		this.loadPromise.then(() => {
+			if (!this.scene.animating || instant) {
+				this.$el.hide();
+				if (this.$statbar) {
+					this.$statbar.remove();
+					this.$statbar = null;
+				}
+				return;
 			}
-			return;
-		}
-		if (this.scene.gen <= 4) {
-			this.anim({
-				x: this.x,
-				y: this.y - 25,
-				z: this.z,
-				scale: 0,
-				opacity: 0,
-				time: 400 / this.scene.acceleration,
-			});
-		} else {
-			this.anim({
+			if (this.scene.gen <= 4) {
+				this.anim({
+					x: this.x,
+					y: this.y - 25,
+					z: this.z,
+					scale: 0,
+					opacity: 0,
+					time: 400 / this.scene.acceleration,
+				});
+			} else {
+				this.anim({
+					x: this.x,
+					y: this.y - 40,
+					z: this.z,
+					scale: 0,
+					opacity: 0,
+					time: 400 / this.scene.acceleration,
+				});
+			}
+			this.scene.showEffect('pokeball', {
+				opacity: 1,
 				x: this.x,
 				y: this.y - 40,
 				z: this.z,
-				scale: 0,
+				scale: 0.7,
+				time: 300 / this.scene.acceleration,
+			}, {
 				opacity: 0,
-				time: 400 / this.scene.acceleration,
-			});
-		}
-		this.scene.showEffect('pokeball', {
-			opacity: 1,
-			x: this.x,
-			y: this.y - 40,
-			z: this.z,
-			scale: 0.7,
-			time: 300 / this.scene.acceleration,
-		}, {
-			opacity: 0,
-			x: this.x,
-			y: this.y,
-			z: this.behind(50),
-			time: 700 / this.scene.acceleration,
-		}, 'ballistic2');
-		if (this.scene.acceleration < 3) this.scene.wait(600 / this.scene.acceleration);
+				x: this.x,
+				y: this.y,
+				z: this.behind(50),
+				time: 700 / this.scene.acceleration,
+			}, 'ballistic2');
+			if (this.scene.acceleration < 3) this.scene.wait(600 / this.scene.acceleration);
 
-		this.updateStatbar(pokemon, true);
-		let $statbar = this.$statbar;
-		if ($statbar) {
-			this.$statbar = null;
-			$statbar.animate({
-				left: this.statbarLeft + (this.isFrontSprite ? 50 : -50),
-				opacity: 0,
-			}, 300 / this.scene.acceleration, () => {
-				$statbar.remove();
-			});
-		}
+			this.updateStatbar(pokemon, true);
+			let $statbar = this.$statbar;
+			if ($statbar) {
+				this.$statbar = null;
+				$statbar.animate({
+					left: this.statbarLeft + (this.isFrontSprite ? 50 : -50),
+					opacity: 0,
+				}, 300 / this.scene.acceleration, () => {
+					$statbar.remove();
+				});
+			}
+		});
+
 	}
 	animFaint(pokemon: Pokemon) {
 		this.removeSub();
@@ -2738,105 +2792,106 @@ export class PokemonSprite extends Sprite {
 	animTransform(pokemon: Pokemon, useSpeciesAnim?: boolean, isPermanent?: boolean) {
 		if (!this.scene.animating && !isPermanent) return;
 
-		// KN: getSpriteData called here
-		let sp = Dex.getSpriteData(pokemon, this.isFrontSprite, {
-			gen: this.scene.gen,
-			mod: this.scene.mod,
-		});
-		let oldsp = this.sp;
-		if (isPermanent) {
-			if (pokemon.volatiles.dynamax) {
+		this.loadPromise.then(() => {
+			let sp = Dex.getSpriteData(pokemon, this.isFrontSprite, {
+				gen: this.scene.gen,
+				mod: this.scene.mod,
+			});
+			let oldsp = this.sp;
+			if (isPermanent) {
+				if (pokemon.volatiles.dynamax) {
 				// if a permanent forme change happens while dynamaxed, we need an undynamaxed sprite to go back to
-				// KN: getSpriteData called here
-				this.oldsp = Dex.getSpriteData(pokemon, this.isFrontSprite, {
-					gen: this.scene.gen,
-					mod: this.scene.mod,
-					dynamax: false,
-				});
-			} else {
-				this.oldsp = null;
+					this.oldsp = Dex.getSpriteData(pokemon, this.isFrontSprite, {
+						gen: this.scene.gen,
+						mod: this.scene.mod,
+						dynamax: false,
+					});
+				} else {
+					this.oldsp = null;
+				}
+			} else if (!this.oldsp) {
+				this.oldsp = oldsp;
 			}
-		} else if (!this.oldsp) {
-			this.oldsp = oldsp;
-		}
-		this.sp = sp;
-		this.cryurl = sp.cryurl;
+			this.sp = sp;
+			this.cryurl = sp.cryurl;
 
-		if (!this.scene.animating) return;
-		let speciesid = toID(pokemon.getSpeciesForme());
-		let doCry = false;
-		let skipAnim = !pokemon.isActive();
-		const scene = this.scene;
-		if (useSpeciesAnim && !skipAnim) {
-			if (speciesid === 'kyogreprimal') {
-				BattleOtherAnims.primalalpha.anim(scene, [this]);
-				doCry = true;
-			} else if (speciesid === 'groudonprimal') {
-				BattleOtherAnims.primalomega.anim(scene, [this]);
-				doCry = true;
-			} else if (speciesid === 'necrozmaultra') {
-				BattleOtherAnims.ultraburst.anim(scene, [this]);
-				doCry = true;
-			} else if (speciesid === 'zygardecomplete') {
-				BattleOtherAnims.powerconstruct.anim(scene, [this]);
-			} else if (speciesid === 'wishiwashischool' || speciesid === 'greninjaash') {
-				BattleOtherAnims.schoolingin.anim(scene, [this]);
-			} else if (speciesid === 'wishiwashi') {
-				BattleOtherAnims.schoolingout.anim(scene, [this]);
-			} else if (speciesid === 'mimikyubusted' || speciesid === 'mimikyubustedtotem' ||
-				speciesid === 'aegislash' || speciesid === 'aegislashblade') {
+			if (!this.scene.animating) return;
+			let speciesid = toID(pokemon.getSpeciesForme());
+			let doCry = false;
+			let skipAnim = !pokemon.isActive();
+			const scene = this.scene;
+			if (useSpeciesAnim && !skipAnim) {
+				if (speciesid === 'kyogreprimal') {
+					BattleOtherAnims.primalalpha.anim(scene, [this]);
+					doCry = true;
+				} else if (speciesid === 'groudonprimal') {
+					BattleOtherAnims.primalomega.anim(scene, [this]);
+					doCry = true;
+				} else if (speciesid === 'necrozmaultra') {
+					BattleOtherAnims.ultraburst.anim(scene, [this]);
+					doCry = true;
+				} else if (speciesid === 'zygardecomplete') {
+					BattleOtherAnims.powerconstruct.anim(scene, [this]);
+				} else if (speciesid === 'wishiwashischool' || speciesid === 'greninjaash') {
+					BattleOtherAnims.schoolingin.anim(scene, [this]);
+				} else if (speciesid === 'wishiwashi') {
+					BattleOtherAnims.schoolingout.anim(scene, [this]);
+				} else if (speciesid === 'mimikyubusted' || speciesid === 'mimikyubustedtotem' ||
+					speciesid === 'aegislash' || speciesid === 'aegislashblade') {
 				// standard animation
-			} else if (speciesid === 'palafinhero') {
-				skipAnim = true;
-			} else {
-				BattleOtherAnims.megaevo.anim(scene, [this]);
-				doCry = true;
+				} else if (speciesid === 'palafinhero') {
+					skipAnim = true;
+				} else {
+					BattleOtherAnims.megaevo.anim(scene, [this]);
+					doCry = true;
+				}
 			}
-		}
-		// Constructing here gives us 300ms extra time to preload the new sprite
-		let $newEl = $('<img src="' + (sp.url ?? "") + '" style="display:block;opacity:0;position:absolute"' + (sp.pixelated ? ' class="pixelated"' : '') + ' />');
-		$newEl.css(this.scene.pos({
-			x: this.x,
-			y: this.y,
-			z: this.z,
-			yscale: 0,
-			xscale: 0,
-			opacity: 0,
-		}, sp));
-		if (skipAnim) {
-			this.$el.replaceWith($newEl);
-			this.$el = $newEl;
-			this.animReset();
-		} else {
-			this.$el.animate(this.scene.pos({
+			// Constructing here gives us 300ms extra time to preload the new sprite
+			let $newEl = $('<img src="' + (sp.url ?? "") + '" style="display:block;opacity:0;position:absolute"' + (sp.pixelated ? ' class="pixelated"' : '') + ' />');
+			$newEl.css(this.scene.pos({
 				x: this.x,
 				y: this.y,
 				z: this.z,
 				yscale: 0,
 				xscale: 0,
-				opacity: 0.3,
-			}, oldsp), 300, () => {
-				if (this.cryurl && doCry) {
-					BattleSound.playEffect(this.cryurl);
-				}
+				opacity: 0,
+			}, sp));
+			if (skipAnim) {
 				this.$el.replaceWith($newEl);
 				this.$el = $newEl;
-				this.$el.animate(scene.pos({
+				this.animReset();
+			} else {
+				this.$el.animate(this.scene.pos({
 					x: this.x,
 					y: this.y,
 					z: this.z,
-					opacity: 1,
-				}, sp), 300);
-			});
-			this.scene.wait(500);
-		}
+					yscale: 0,
+					xscale: 0,
+					opacity: 0.3,
+				}, oldsp), 300, () => {
+					if (this.cryurl && doCry) {
+						BattleSound.playEffect(this.cryurl);
+					}
+					this.$el.replaceWith($newEl);
+					this.$el = $newEl;
+					this.$el.animate(scene.pos({
+						x: this.x,
+						y: this.y,
+						z: this.z,
+						opacity: 1,
+					}, sp), 300);
+				});
+				this.scene.wait(500);
+			}
 
-		this.scene.updateSidebar(pokemon.side);
-		if (isPermanent) {
-			this.resetStatbar(pokemon);
-		} else {
-			this.updateStatbar(pokemon);
-		}
+			this.scene.updateSidebar(pokemon.side);
+			if (isPermanent) {
+				this.resetStatbar(pokemon);
+			} else {
+				this.updateStatbar(pokemon);
+			}
+		});
+
 	}
 
 	pokeEffect(id: ID) {

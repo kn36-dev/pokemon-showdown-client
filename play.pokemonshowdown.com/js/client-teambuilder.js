@@ -773,7 +773,6 @@
 			if (this.curTeam.format.includes('legends')) {
 				this.curTeam.dex = Dex.mod('gen9legendsou');
 			}
-			// console.log("this.curSetList assigned in 770");
 			Storage.activeSetList = this.curSetList = Storage.unpackTeam(this.curTeam.team);
 			this.curTeamIndex = i;
 			this.update();
@@ -1253,7 +1252,6 @@
 					if (this.curSetList.length < this.curTeam.capacity && this.deletedSet && i === this.deletedSetLoc) {
 						buf += '<li><button name="undeleteSet" class="button"><i class="fa fa-undo"></i> Undo Delete</button></li>';
 					}
-					// console.log("renderSet called at line 1248 in client-teambuilder: ", this.curSetList[i], i);
 					buf += this.renderSet(this.curSetList[i], i);
 				}
 				if (this.deletedSet && i === this.deletedSetLoc) {
@@ -1391,8 +1389,6 @@
 			buf += '<div class="setcell setcell-typeicons">';
 
 			var types = BattleFusion.getFusionTypes(species, set.fusionSet);
-			// var types = species.types;
-			// console.log({ setInRenderSet: set, speciesInRenderSet: species, types: types });
 			if (types) {
 				for (var i = 0; i < types.length; i++) buf += Dex.getTypeIcon(types[i]);
 			}

@@ -12,8 +12,9 @@ import { Pokemon, type Battle, type ServerPokemon } from "./battle";
 import { Dex, type ModdedDex, toID, type ID } from "./battle-dex";
 import type { BattleScene } from "./battle-animations";
 import { BattleLog } from "./battle-log";
-import { Move, BattleNatures } from "./battle-dex-data";
+import { Move, BattleNatures, type Species } from "./battle-dex-data";
 import { BattleTextParser } from "./battle-text-parser";
+import { getFusionTypes, getSpeedStat } from "./battle-fusion-for-tooltips";
 
 export class ModifiableValue {
 	value = 0;
@@ -822,7 +823,7 @@ export class BattleTooltips {
 	showPokemonTooltip(
 		clientPokemon: Pokemon | null, serverPokemon?: ServerPokemon | null, isActive?: boolean, illusionIndex?: number
 	) {
-		// KN: Here we check the fusion stats and abilities
+		console.log({ clientPokemon, serverPokemon });
 		const pokemon = clientPokemon || serverPokemon!;
 		let text = '';
 		let genderBuf = '';
@@ -1501,7 +1502,13 @@ export class BattleTooltips {
 		const tr = Math.trunc || Math.floor;
 		const species = pokemon.getSpecies();
 		let rules = this.battle.rules;
-		let baseSpe = species.baseStats.spe;
+		let baseSpe = 0;
+		if (pokemon.fusion) {
+			const bodySpecies = this.battle.dex.species.get(pokemon.fusion);
+			baseSpe = getSpeedStat(species, bodySpecies);
+		} else {
+			baseSpe = species.baseStats.spe;
+		}
 		if (rules['Scalemons Mod']) {
 			const bstWithoutHp = species.bst - species.baseStats.hp;
 			const scale = 600 - species.baseStats.hp;
@@ -2471,6 +2478,13 @@ export class BattleTooltips {
 		return value;
 	}
 	getPokemonTypes(pokemon: Pokemon | ServerPokemon, preterastallized = false): readonly Dex.TypeName[] {
+		const headPokemonSpecies = this.battle.dex.species.get(pokemon.speciesForme);
+		if (pokemon.fusion) {
+			const bodyPokemonSpecies = this.battle.dex.species.get(pokemon.fusion);
+			return getFusionTypes(headPokemonSpecies, bodyPokemonSpecies);
+
+		}
+
 		if (!(pokemon as Pokemon).getTypes) {
 			return this.battle.dex.species.get(pokemon.speciesForme).types;
 		}
@@ -2506,8 +2520,17 @@ export class BattleTooltips {
 			} else {
 				const speciesForme = clientPokemon.getSpeciesForme() || serverPokemon?.speciesForme || '';
 				const species = this.battle.dex.species.get(speciesForme);
+
+				let bodyPokemonSpecies;
+				let bodyPokemonSpeciesAbilities: Species['abilities'] = { 0: '' };
+				if (clientPokemon.fusion) {
+					bodyPokemonSpecies = this.battle.dex.species.get(clientPokemon.fusion);
+					bodyPokemonSpeciesAbilities = { 0: '', ...Object.values(bodyPokemonSpecies.abilities) };
+				}
+
 				if (species.exists && species.abilities) {
-					abilityData.possibilities = Object.values(species.abilities);
+					abilityData.possibilities = [...Object.values(species.abilities),
+						...Object.values(bodyPokemonSpeciesAbilities)];
 					if (this.battle.rules['Frantic Fusions Mod']) {
 						const fusionSpecies = this.battle.dex.species.get(clientPokemon.name);
 						if (fusionSpecies.exists && fusionSpecies.name !== species.name) {
