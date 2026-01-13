@@ -313,17 +313,42 @@ export class BattleTooltips {
 			let side = this.battle.sides[sideIndex];
 			let pokemon = side.pokemon[parseInt(args[2], 10)];
 
-			// Pokemon doesn't have fusion here when logged
-			// console.log({ pokemonInShowTooltip: pokemon });
 			if (args[3] === 'illusion') {
 				buf = '';
 				const species = pokemon.getBaseSpecies().baseSpecies;
-				let index = 1;
-				for (const otherPokemon of side.pokemon) {
-					if (otherPokemon.getBaseSpecies().baseSpecies === species) {
-						buf += this.showPokemonTooltip(otherPokemon, null, false, index);
-						index++;
+				const fusion = pokemon.fusion;
+				const name = pokemon.name; // Get the specific name
+
+				// DEBUG LOGS
+				console.group("--- Illusion Debug Check ---");
+				console.log("Hovered Pokemon:", pokemon.name);
+				console.log("Base Species detected:", species);
+				console.log("Fusion property value:", fusion);
+
+				// This log will show you the state of all pokemon on the side
+				console.table(side.pokemon.map(p => ({
+					name: p.name,
+					baseSpecies: p.getBaseSpecies().baseSpecies,
+					fusionValue: p.fusion,
+					hasFusionProperty: 'fusion' in p,
+				})));
+
+				const matches = side.pokemon.filter(p =>
+					p.getBaseSpecies().baseSpecies === species &&
+					p.fusion === fusion &&
+					p.name === name);
+
+				console.log("Matches found:", matches.length);
+				console.groupEnd();
+
+				if (matches.length > 1) {
+					// Only show "Possible Illusion #" if there's actual ambiguity
+					for (let i = 0; i < matches.length; i++) {
+						buf += this.showPokemonTooltip(matches[i], null, false, i + 1);
 					}
+				} else {
+					// If it's a unique fusion, just show the standard tooltip
+					buf = this.showPokemonTooltip(pokemon);
 				}
 			} else {
 				buf = this.showPokemonTooltip(pokemon);
@@ -865,12 +890,16 @@ export class BattleTooltips {
 			} else if (clientPokemon?.volatiles.typechange || clientPokemon?.volatiles.typeadd) {
 				text += `<small>(Type changed)</small><br />`;
 			}
+			if (pokemon.fusion) {
+				text += `<small>Fusion: </small><strong>${pokemon.fusion}</strong><br />`;
+			}
 			text += `<span class="textaligned-typeicons">${types.map(type => Dex.getTypeIcon(type)).join(' ')}</span>`;
 			if (pokemon.terastallized) {
 				text += `&nbsp; &nbsp; <small>(base: <span class="textaligned-typeicons">${this.getPokemonTypes(pokemon, true).map(type => Dex.getTypeIcon(type)).join(' ')}</span>)</small>`;
 			} else if (knownPokemon.teraType && !this.battle.rules['Terastal Clause']) {
 				text += `&nbsp; &nbsp; <small>(Tera Type: <span class="textaligned-typeicons">${Dex.getTypeIcon(knownPokemon.teraType)}</span>)</small>`;
 			}
+
 			text += `</h2>`;
 		}
 
