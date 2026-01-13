@@ -26,6 +26,11 @@
 
 			BattleSound.setMute(Dex.prefs('mute'));
 
+			// console.log({ optionsPassedIntoNewBattle: {
+			// 	id: this.id,
+			// 	$frame: this.$battle,
+			// 	$logFrame: this.$chatFrame
+			// } });
 			this.battle = new Battle({
 				id: this.id,
 				$frame: this.$battle,

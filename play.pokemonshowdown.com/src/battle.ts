@@ -637,6 +637,8 @@ export class Side {
 	faintCounter = 0;
 
 	constructor(battle: Battle, n: number) {
+		// console.trace({ battleInNewSide: battle });
+		// console.trace("Who called new Side with missing fusion");
 		this.battle = battle;
 		this.n = n;
 		this.sideid = ['p1', 'p2', 'p3', 'p4'][n] as SideID;
@@ -754,6 +756,7 @@ export class Side {
 		const oldPokemon = replaceSlot >= 0 ? this.pokemon[replaceSlot] : undefined;
 
 		const data = this.battle.parseDetails(name, ident, details);
+		// console.trace({ dataToCreatePoke: data });
 		const poke = new Pokemon(data, this);
 		if (oldPokemon) {
 			poke.item = oldPokemon.item;
@@ -766,8 +769,10 @@ export class Side {
 		if (oldPokemon?.moveTrack.length) poke.moveTrack = oldPokemon.moveTrack;
 
 		if (replaceSlot >= 0) {
-			this.pokemon[replaceSlot] = poke;
+			console.log({ pokeAddedInReplaceSlot: poke });
+			// this.pokemon[replaceSlot] = poke;
 		} else {
+			// console.log({ pokeAddedInReplaceSlotElse: poke });
 			this.pokemon.push(poke);
 		}
 		if (this.pokemon.length > this.totalPokemon || this.battle.speciesClause) {
@@ -1173,7 +1178,9 @@ export class Battle {
 
 		this.p1 = new Side(this, 0);
 		this.p2 = new Side(this, 1);
+		// console.trace({ p1: this.p1 });
 		this.sides = [this.p1, this.p2];
+		// console.trace({ p1: this.p1, p2: this.p2 });
 		this.p2.foe = this.p1;
 		this.p1.foe = this.p2;
 		this.nearSide = this.mySide = this.p1;
@@ -3220,6 +3227,9 @@ export class Battle {
 		output.searchid = (!isTeamPreview ? `${pokemonid}|${details}` : '');
 		let splitDetails = details.split(', ');
 
+		// KN: the details do not have fusion in it, check where it's from
+		// console.trace({ parseDetailsSplitDetails: splitDetails });
+
 		// NEW CODE START
 		if (splitDetails[splitDetails.length - 1].startsWith('fusion:')) {
 			output.fusion = splitDetails[splitDetails.length - 1].slice(8).trim();
@@ -3478,6 +3488,8 @@ export class Battle {
 				this.p3.isFar = this.p1.isFar;
 				this.p4.isFar = this.p2.isFar;
 				this.sides = [this.p1, this.p2, this.p3, this.p4];
+				// console.trace({ p1: this.p1, p2: this.p2, p3: this.p3, p4: this.p4 });
+
 				// intentionally sync p1/p3 and p2/p4's active arrays
 				this.p1.active = this.p3.active = [null, null];
 				this.p2.active = this.p4.active = [null, null];
@@ -3670,6 +3682,7 @@ export class Battle {
 			const side = this.getSide(args[1]);
 			side.clearPokemon();
 			for (const set of team) {
+				console.log({ setInShowTeam: set });
 				const details = set.species + (!set.level || set.level === 100 ? '' : `, L${set.level}`) +
 					(!set.gender || set.gender === 'N' ? '' : `, ${set.gender}`) + (set.shiny ? ', shiny' : '');
 				const pokemon = side.addPokemon('', '', details);
@@ -3679,6 +3692,7 @@ export class Battle {
 					pokemon.rememberMove(move, 0);
 				}
 				if (set.teraType) pokemon.teraType = set.teraType;
+				if (set.fusionSet) pokemon.fusion = set.fusionSet.baseSpecies;
 			}
 			this.log(args, kwArgs);
 			break;

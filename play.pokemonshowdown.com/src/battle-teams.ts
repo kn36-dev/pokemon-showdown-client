@@ -44,7 +44,7 @@ export declare namespace Teams {
 	export interface PokemonSet extends Partial<FullPokemonSet> {
 		/** Defaults to species name (not including forme), like in games */
 		species: string;
-		fusionSet: { baseSpecies: string };
+		fusionSet?: { baseSpecies: string };
 		moves: string[];
 	}
 	export interface Team {
@@ -247,17 +247,19 @@ export const Teams = new class {
 			j = buf.indexOf(']', i);
 			let misc;
 			if (j < 0) {
-				if (i < buf.length) misc = buf.substring(i).split(',', 6);
+				if (i < buf.length) misc = buf.substring(i).split(',', 7);
 			} else {
-				if (i !== j) misc = buf.substring(i, j).split(',', 6);
+				if (i !== j) misc = buf.substring(i, j).split(',', 7);
 			}
 			if (misc) {
+				console.log({ miscInUnpack: misc });
 				set.happiness = (misc[0] ? Number(misc[0]) : undefined);
 				set.hpType = misc[1] || undefined;
 				set.pokeball = misc[2] || undefined;
 				set.gigantamax = !!misc[3] || undefined;
 				set.dynamaxLevel = (misc[4] ? Number(misc[4]) : undefined);
 				set.teraType = misc[5] || undefined;
+				set.fusionSet = misc[6] ? Dex.species.get(misc[6]) : undefined;
 			}
 			i = j + 1;
 			if (j < 0 || i <= lastI) break;

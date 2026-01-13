@@ -99,6 +99,7 @@ export class BattleScene implements BattleSceneStub {
 	activeAnimations = $();
 
 	constructor(battle: Battle, $frame: JQuery, $logFrame: JQuery) {
+		// console.log({ battleInBattleSceneConstructor: battle });
 		this.battle = battle;
 
 		$frame.addClass('battle');
@@ -2342,7 +2343,7 @@ export class PokemonSprite extends Sprite {
 			const $newEl = $(`<img style="display:none;position:absolute"${this.sp.pixelated ? ' class="pixelated"' : ''} />`);
 
 			const handleLoad = () => {
-				console.log(`[PokemonSprite.reset] Image loaded for ${pokemon.name}. Src: ${this.sp.url ?? "no url in this.sp"}`);
+				// console.log(`[PokemonSprite.reset] Image loaded for ${pokemon.name}. Src: ${this.sp.url ?? "no url in this.sp"}`);
 				resolveLoad();
 			};
 
@@ -2511,7 +2512,7 @@ export class PokemonSprite extends Sprite {
 			}
 		}
 
-		console.log(`[PokemonSprite.recalculatePos] Pos calculated. X: ${this.x}, Y: ${this.y}, Slot: ${slot}`);
+		// console.log(`[PokemonSprite.recalculatePos] Pos calculated. X: ${this.x}, Y: ${this.y}, Slot: ${slot}`);
 		// });
 	}
 	animSummon(pokemon: Pokemon, slot: number, instant?: boolean) {

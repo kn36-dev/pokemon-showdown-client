@@ -1136,8 +1136,6 @@ Storage.unpackTeam = function (buf) {
 		i = j + 1;
 	}
 
-	// console.log({ team: team });
-
 	return team;
 };
 

@@ -33,6 +33,8 @@ export class ModifiableValue {
 		this.pokemon = pokemon;
 		this.serverPokemon = serverPokemon;
 
+		// console.trace({ pokemon, serverPokemon });
+
 		this.itemName = this.battle.dex.items.get(serverPokemon.item).name;
 		const ability = serverPokemon.ability || pokemon?.ability || serverPokemon.baseAbility;
 		this.abilityName = this.battle.dex.abilities.get(ability).name;
@@ -310,6 +312,9 @@ export class BattleTooltips {
 			let sideIndex = parseInt(args[1], 10);
 			let side = this.battle.sides[sideIndex];
 			let pokemon = side.pokemon[parseInt(args[2], 10)];
+
+			// Pokemon doesn't have fusion here when logged
+			// console.log({ pokemonInShowTooltip: pokemon });
 			if (args[3] === 'illusion') {
 				buf = '';
 				const species = pokemon.getBaseSpecies().baseSpecies;
@@ -386,6 +391,7 @@ export class BattleTooltips {
 		}
 
 		this.placeTooltip(buf, elem, ownHeight, type);
+		// console.log({ buf, elem, ownHeight, type });
 		return true;
 	}
 
@@ -823,7 +829,7 @@ export class BattleTooltips {
 	showPokemonTooltip(
 		clientPokemon: Pokemon | null, serverPokemon?: ServerPokemon | null, isActive?: boolean, illusionIndex?: number
 	) {
-		console.log({ clientPokemon, serverPokemon });
+		// console.trace({ serverPokemon });
 		const pokemon = clientPokemon || serverPokemon!;
 		let text = '';
 		let genderBuf = '';
