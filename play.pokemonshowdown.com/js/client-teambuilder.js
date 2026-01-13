@@ -1330,7 +1330,7 @@
 			// --- ADD THIS BLOCK ---
 			// New Fusion/Body cell
 			buf += '<div class="setcell setcell-fusion"><label>Fusion/Body</label>';
-			buf += '<input type="text" name="fusion" class="textbox chartinput rainbow" value="' + BattleLog.escapeHTML(set.fusionSet && set.fusionSet.baseSpecies ? set.fusionSet.baseSpecies : '') + '" autocomplete="off">';
+			buf += '<input type="text" name="fusion" class="textbox chartinput rainbow" value="' + BattleLog.escapeHTML(set.fusionSet && set.fusionSet.name ? set.fusionSet.name : '') + '" autocomplete="off">';
 			buf += '<button class="chartinput closebutton" name="deleteFusion" aria-label="Delete" style="position:absolute;top: -1px;right: 1px;"><i class="fa fa-times-circle"></i></button></div>';
 			// ----------------------
 
@@ -3596,7 +3596,9 @@
 		setPokemon: function (val, selectNext) {
 			var set = this.curSet;
 			var species = this.curTeam.dex.species.get(val);
-			// console.log("Value in setPokemon: ", val);
+
+			console.log({ valInSetPokemon: val, species: species });
+
 			if (!species.exists || set.species === species.name) {
 				if (selectNext) this.$('input[name=item]').select();
 				return;
@@ -3666,6 +3668,8 @@
 			}
 
 			var species = this.curTeam.dex.species.get(val);
+
+			console.log({ valInSetFusion: val, species: species });
 
 			this.curSet.fusionSet = species;
 
