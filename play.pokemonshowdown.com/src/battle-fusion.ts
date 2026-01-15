@@ -112,7 +112,7 @@ export class BattleFusion {
 	 */
 	static getFusionWeight(set: PokemonSet): number {
 		if (!set.fusionSet) return set.weightkg;
-		return (set.weightkg + set.fusionSet.weightkg) / 2;
+		return ((set.weightkg + set.fusionSet.weightkg) / 2).toFixed(2) as unknown as number;
 	}
 
 	/**
