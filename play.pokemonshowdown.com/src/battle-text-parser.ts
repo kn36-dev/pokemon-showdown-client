@@ -44,6 +44,7 @@ export class BattleTextParser {
 		}
 		const index = line.indexOf('|', 1);
 		const cmd = line.slice(1, index);
+		// console.log({ whatCmdReceived: cmd });
 		switch (cmd) {
 		case 'chatmsg': case 'chatmsg-raw': case 'raw': case 'error': case 'html':
 		case 'inactive': case 'inactiveoff': case 'warning':
@@ -472,6 +473,7 @@ export class BattleTextParser {
 			const [, side, name] = args;
 			if (side === 'p1' && name) {
 				this.p1 = BattleTextParser.escapeReplace(name);
+				// console.log({ whatIsAssignedHereHmm: this.p1 });
 			} else if (side === 'p2' && name) {
 				this.p2 = BattleTextParser.escapeReplace(name);
 			} else if (side === 'p3' && name) {

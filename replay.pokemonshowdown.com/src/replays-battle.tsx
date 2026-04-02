@@ -115,6 +115,7 @@ export class BattlePanel extends preact.Component<{ id: string }> {
 			replay.log ||= log;
 			this.result = replay;
 			const $base = $(this.base!);
+			console.log("new battle created at loadResult");
 			this.battle = new Battle({
 				id: replay.id as ID,
 				$frame: $base.find('.battle'),

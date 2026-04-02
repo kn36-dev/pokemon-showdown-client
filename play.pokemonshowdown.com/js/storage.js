@@ -55,8 +55,9 @@ Storage.bg = {
 		if (!bgid) {
 			if (location.host === 'smogtours.psim.us') {
 				bgid = 'shaymin';
-			} else if (location.host === Config.routes.client) {
-				bgid = ['horizon', 'ocean', 'waterfall', 'shaymin', 'charizards', 'psday'][Math.floor(Math.random() * 6)];
+			} else if (location.host === Config.routes.client || bgid === 'waterfall') {
+				var bgs = ['horizon', 'ocean', 'shaymin', 'charizards', 'psday'];
+				bgid = bgs[Math.floor(Math.random() * bgs.length)];
 			} else {
 				$(document.body).css({
 					background: '',
@@ -96,10 +97,6 @@ Storage.bg = {
 			case 'ocean':
 				hues = ["82.8169014084507,34.63414634146342%", "216.16438356164383,29.55465587044534%", "212.92682926829266,59.42028985507245%", "209.18918918918916,57.51295336787566%", "199.2857142857143,48.275862068965495%", "213.11999999999998,55.06607929515419%"];
 				attrib = '<a href="https://quanyails.deviantart.com/art/Sunrise-Ocean-402667154" target="_blank" class="subtle">"Sunrise Ocean" <small>background by Quanyails</small></a>';
-				break;
-			case 'waterfall':
-				hues = ["119.31034482758622,37.66233766233767%", "184.36363636363635,23.012552301255226%", "108.92307692307692,37.14285714285714%", "70.34482758620689,20.567375886524818%", "98.39999999999998,36.76470588235296%", "140,38.18181818181818%"];
-				attrib = '<a href="https://x.com/Yilxaevum" target="_blank" class="subtle">"Irie" <small>background by Samuel Teo</small></a>';
 				break;
 			case 'shaymin':
 				hues = ["39.000000000000064,21.7391304347826%", "170.00000000000003,2.380952380952378%", "157.5,11.88118811881188%", "174.78260869565216,12.041884816753928%", "185.00000000000003,12.76595744680851%", "20,5.660377358490567%"];
@@ -431,6 +428,7 @@ Storage.onMessage = function ($e) {
 		}
 		Storage.loadPackedTeams(data.substr(1));
 		Storage.saveTeams = function () {
+			// console.log("packAllTeams called at line 434");
 			var packedTeams = Storage.packAllTeams(Storage.teams);
 			Storage.postCrossOriginMessage('T' + packedTeams);
 
@@ -444,6 +442,7 @@ Storage.onMessage = function ($e) {
 		};
 		if (oldTeams) {
 			Storage.teams = Storage.teams.concat(oldTeams);
+			// console.log("saveTeams called at line 448 in storage");
 			Storage.saveTeams();
 			localStorage.removeItem('showdown_teams');
 		}
@@ -537,7 +536,7 @@ Storage.initTestClient = function () {
 				data.sid = sid;
 				get(uri, data, callback, type);
 			} else {
-				app.addPopup(ProxyPopup, { uri: uri, callback: callback });
+				// app.addPopup(ProxyPopup, { uri: uri, callback: function (data) {} });
 			}
 		};
 		var post = $.post;
@@ -559,7 +558,7 @@ Storage.initTestClient = function () {
 					src += '<input type=hidden name="' + i + '" value="' + BattleLog.escapeHTML(data[i]) + '">';
 				}
 				src += '<input type=submit value="Please click this button first."></form></body></html>';
-				app.addPopup(ProxyPopup, { uri: "data:text/html;charset=UTF-8," + encodeURIComponent(src), callback: callback });
+				// app.addPopup(ProxyPopup, { uri: "data:text/html;charset=UTF-8," + encodeURIComponent(src), callback: callback });
 			}
 		};
 		Storage.whenPrefsLoaded.load();
@@ -653,6 +652,7 @@ Storage.loadRemoteTeams = function (after) {
 				var mons = team.team.split(',').map(function (mon) {
 					return { species: mon };
 				});
+				// console.log("packTeam in storage at line 657");
 				team.team = Storage.packTeam(mons);
 				Storage.teams.unshift(team);
 			}
@@ -677,6 +677,7 @@ Storage.loadPackedTeams = function (buffer) {
 Storage.saveTeams = function () {
 	try {
 		if (window.localStorage) {
+			// console.log("packAllTeams called at line 682");
 			localStorage.setItem('showdown_teams', Storage.packAllTeams(this.teams));
 			Storage.cantSave = false;
 		}
@@ -695,18 +696,22 @@ Storage.getPackedTeams = function () {
 		packedTeams = localStorage.getItem('showdown_teams');
 	} catch (e) {}
 	if (packedTeams) return packedTeams;
+	// console.log("packAllTeams called at line 701");
 	return Storage.packAllTeams(this.teams);
 };
 
 Storage.saveTeam = function () {
+	// console.log("saveTeams called at line 707 in storage");
 	this.saveTeams();
 };
 
 Storage.deleteTeam = function () {
+	// console.log("saveTeams called at line 712 in storage");
 	this.saveTeams();
 };
 
 Storage.saveAllTeams = function () {
+	// console.log("saveTeams called at line 717in storage");
 	this.saveTeams();
 };
 
@@ -729,6 +734,7 @@ Storage.unpackAllTeams = function (buffer) {
 				format = format.slice(0, -4);
 				capacity = 24;
 			}
+			// console.log("packTeam in storage at line 734");
 			return {
 				name: oldTeam.name || '',
 				format: format,
@@ -866,12 +872,20 @@ Storage.packTeam = function (team) {
 			buf += '|';
 		}
 
-		if (set.pokeball || (set.hpType && !hasHP) || set.gigantamax || (set.dynamaxLevel !== undefined && set.dynamaxLevel !== 10) || set.teraType) {
+		if (
+			set.pokeball ||
+			(set.hpType && !hasHP) ||
+			set.gigantamax ||
+			(set.dynamaxLevel !== undefined && set.dynamaxLevel !== 10) ||
+			set.teraType ||
+			(set.fusionSet && set.fusionSet.baseSpecies)
+		) {
 			buf += ',' + (set.hpType || '');
 			buf += ',' + toID(set.pokeball);
 			buf += ',' + (set.gigantamax ? 'G' : '');
 			buf += ',' + (set.dynamaxLevel !== undefined && set.dynamaxLevel !== 10 ? set.dynamaxLevel : '');
 			buf += ',' + (set.teraType || '');
+			buf += ',' + (set.fusionSet && set.fusionSet.baseSpecies ? toID(set.fusionSet.baseSpecies) : '');
 		}
 	}
 
@@ -1019,6 +1033,7 @@ Storage.unpackTeam = function (buf) {
 		j = buf.indexOf('|', i);
 		var species = Dex.species.get(buf.substring(i, j) || set.name);
 		set.species = species.name;
+		set.weightkg = species.weightkg;
 		i = j + 1;
 
 		// item
@@ -1104,9 +1119,9 @@ Storage.unpackTeam = function (buf) {
 		j = buf.indexOf(']', i);
 		var misc = undefined;
 		if (j < 0) {
-			if (i < buf.length) misc = buf.substring(i).split(',', 6);
+			if (i < buf.length) misc = buf.substring(i).split(',', 7);
 		} else {
-			if (i !== j) misc = buf.substring(i, j).split(',', 6);
+			if (i !== j) misc = buf.substring(i, j).split(',', 7);
 		}
 		if (misc) {
 			set.happiness = (misc[0] ? Number(misc[0]) : 255);
@@ -1115,6 +1130,7 @@ Storage.unpackTeam = function (buf) {
 			set.gigantamax = !!misc[3];
 			set.dynamaxLevel = (misc[4] ? Number(misc[4]) : 10);
 			set.teraType = misc[5];
+			set.fusionSet = misc[6] ? Dex.species.get(misc[6]) : undefined;
 		}
 		if (j < 0 || buf.indexOf('|', j) < 0) break;
 		i = j + 1;
@@ -1167,6 +1183,7 @@ Storage.getTeamIcons = function (team) {
 		// app.rooms.teambuilder.curSetList because the teambuilder
 		// room may have been closed by the time we need to get
 		// a packed team.
+		// console.log("packTeam in storage at line 1174");
 		team.team = Storage.packTeam(Storage.activeSetList);
 		if ('teambuilder' in app.rooms) {
 			return Storage.packedTeamIcons(team.team);
@@ -1180,8 +1197,10 @@ Storage.getTeamIcons = function (team) {
 };
 
 Storage.getPackedTeam = function (team) {
+	// console.log("first line in getPackedTeam: ", team);
 	if (!team) return null;
 	if (team.iconCache === '!') {
+		// console.log("iconCache block in getPackedTeam: ");
 		// see the same case in Storage.getTeamIcons
 		team.team = Storage.packTeam(Storage.activeSetList);
 		if (!('teambuilder' in app.rooms)) {
@@ -1191,8 +1210,10 @@ Storage.getPackedTeam = function (team) {
 	}
 	if (typeof team.team !== 'string') {
 		// should never happen
+		// console.log("packTeam in storage at line 1200");
 		team.team = Storage.packTeam(team.team);
 	}
+	// console.log("final line in getPackedTeam: ", team.team);
 	return team.team;
 };
 
@@ -1204,6 +1225,7 @@ Storage.importTeam = function (buffer, teams) {
 		Storage.teams = [];
 		teams = Storage.teams;
 	} else if (text.length === 1 || (text.length === 2 && !text[1])) {
+		// console.log("After importing whole team storage line 1230");
 		return Storage.unpackTeam(text[0]);
 	}
 	for (var i = 0; i < text.length; i++) {
@@ -1226,6 +1248,8 @@ Storage.importTeam = function (buffer, teams) {
 				line = $.trim(line.substr(bracketIndex + 1));
 			}
 			if (teams.length && typeof teams[teams.length - 1].team !== 'string') {
+
+				// console.log("After importing whole team storage line 1254");
 				teams[teams.length - 1].team = Storage.packTeam(teams[teams.length - 1].team);
 			}
 			var slashIndex = line.lastIndexOf('/');
@@ -1248,6 +1272,7 @@ Storage.importTeam = function (buffer, teams) {
 			curSet = null;
 			teams.push(Storage.unpackLine(line));
 		} else if (!curSet) {
+			// console.log("Line 1277");
 			curSet = { name: '', species: '', gender: '' };
 			team.push(curSet);
 			var atIndex = line.lastIndexOf(' @ ');
@@ -1302,6 +1327,9 @@ Storage.importTeam = function (buffer, teams) {
 			curSet.dynamaxLevel = +line;
 		} else if (line === 'Gigantamax: Yes') {
 			curSet.gigantamax = true;
+		} else if (line.substr(0, 8) === 'Fusion: ') {
+			line = line.substr(8);
+			curSet.fusionSet = Dex.species.get(line);
 		} else if (line.substr(0, 5) === 'EVs: ') {
 			line = line.substr(5);
 			var evLines = line.split('/');
@@ -1357,6 +1385,7 @@ Storage.importTeam = function (buffer, teams) {
 		}
 	}
 	if (teams && teams.length && typeof teams[teams.length - 1].team !== 'string') {
+		// console.log("After importing whole team storage line 1386");
 		teams[teams.length - 1].team = Storage.packTeam(teams[teams.length - 1].team);
 	}
 	return team;
@@ -1427,9 +1456,12 @@ Storage.exportTeam = function (team, gen, hidestats) {
 		if (curSet.gigantamax) {
 			text += 'Gigantamax: Yes  \n';
 		}
-		if (gen === 9) {
-			var species = Dex.species.get(curSet.species);
-			text += 'Tera Type: ' + (curSet.teraType || species.requiredTeraType || species.types[0]) + "  \n";
+		// if (gen === 9) {
+		// 	var species = Dex.species.get(curSet.species);
+		// 	text += 'Tera Type: ' + (curSet.teraType || species.requiredTeraType || species.types[0]) + "  \n";
+		// }
+		if (curSet.fusionSet && curSet.fusionSet.baseSpecies) {
+			text += 'Fusion: ' + curSet.fusionSet.baseSpecies + "  \n";
 		}
 		if (!hidestats) {
 			var first = true;
@@ -1678,6 +1710,7 @@ Storage.nwLoadTeamFile = function (filename, localApp) {
 	}
 	fs.readFile(this.dir + 'Teams/' + filename, function (err, data) {
 		if (!err) {
+			// console.log("packTeam in storage at line 1690");
 			self.teams.push({
 				name: line,
 				format: format,
@@ -1779,7 +1812,7 @@ Storage.nwSaveTeam = function (team) {
 Storage.nwSaveTeams = function () {
 	// should never happen
 	try {
-		console.log("nwSaveTeams called: " + new Error().stack);
+		// console.log("nwSaveTeams called: " + new Error().stack);
 	} catch (e) {}
 };
 

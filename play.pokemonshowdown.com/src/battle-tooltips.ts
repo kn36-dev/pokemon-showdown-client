@@ -12,8 +12,9 @@ import { Pokemon, type Battle, type ServerPokemon } from "./battle";
 import { Dex, type ModdedDex, toID, type ID } from "./battle-dex";
 import type { BattleScene } from "./battle-animations";
 import { BattleLog } from "./battle-log";
-import { Move, BattleNatures } from "./battle-dex-data";
+import { Move, BattleNatures, type Species } from "./battle-dex-data";
 import { BattleTextParser } from "./battle-text-parser";
+import { getFusionTypes, getSpeedStat } from "./battle-fusion-for-tooltips";
 
 export class ModifiableValue {
 	value = 0;
@@ -31,6 +32,8 @@ export class ModifiableValue {
 		this.battle = battle;
 		this.pokemon = pokemon;
 		this.serverPokemon = serverPokemon;
+
+		// console.trace({ pokemon, serverPokemon });
 
 		this.itemName = this.battle.dex.items.get(serverPokemon.item).name;
 		const ability = serverPokemon.ability || pokemon?.ability || serverPokemon.baseAbility;
@@ -309,15 +312,43 @@ export class BattleTooltips {
 			let sideIndex = parseInt(args[1], 10);
 			let side = this.battle.sides[sideIndex];
 			let pokemon = side.pokemon[parseInt(args[2], 10)];
+
 			if (args[3] === 'illusion') {
 				buf = '';
 				const species = pokemon.getBaseSpecies().baseSpecies;
-				let index = 1;
-				for (const otherPokemon of side.pokemon) {
-					if (otherPokemon.getBaseSpecies().baseSpecies === species) {
-						buf += this.showPokemonTooltip(otherPokemon, null, false, index);
-						index++;
+				const fusion = pokemon.fusion;
+				const name = pokemon.name; // Get the specific name
+
+				// DEBUG LOGS
+				console.group("--- Illusion Debug Check ---");
+				console.log("Hovered Pokemon:", pokemon.name);
+				console.log("Base Species detected:", species);
+				console.log("Fusion property value:", fusion);
+
+				// This log will show you the state of all pokemon on the side
+				console.table(side.pokemon.map(p => ({
+					name: p.name,
+					baseSpecies: p.getBaseSpecies().baseSpecies,
+					fusionValue: p.fusion,
+					hasFusionProperty: 'fusion' in p,
+				})));
+
+				const matches = side.pokemon.filter(p =>
+					p.getBaseSpecies().baseSpecies === species &&
+					p.fusion === fusion &&
+					p.name === name);
+
+				console.log("Matches found:", matches.length);
+				console.groupEnd();
+
+				if (matches.length > 1) {
+					// Only show "Possible Illusion #" if there's actual ambiguity
+					for (let i = 0; i < matches.length; i++) {
+						buf += this.showPokemonTooltip(matches[i], null, false, i + 1);
 					}
+				} else {
+					// If it's a unique fusion, just show the standard tooltip
+					buf = this.showPokemonTooltip(pokemon);
 				}
 			} else {
 				buf = this.showPokemonTooltip(pokemon);
@@ -385,6 +416,7 @@ export class BattleTooltips {
 		}
 
 		this.placeTooltip(buf, elem, ownHeight, type);
+		// console.log({ buf, elem, ownHeight, type });
 		return true;
 	}
 
@@ -822,6 +854,7 @@ export class BattleTooltips {
 	showPokemonTooltip(
 		clientPokemon: Pokemon | null, serverPokemon?: ServerPokemon | null, isActive?: boolean, illusionIndex?: number
 	) {
+		// console.trace({ serverPokemon });
 		const pokemon = clientPokemon || serverPokemon!;
 		let text = '';
 		let genderBuf = '';
@@ -857,12 +890,16 @@ export class BattleTooltips {
 			} else if (clientPokemon?.volatiles.typechange || clientPokemon?.volatiles.typeadd) {
 				text += `<small>(Type changed)</small><br />`;
 			}
+			if (pokemon.fusion) {
+				text += `<small>Fusion: </small><strong>${pokemon.fusion}</strong><br />`;
+			}
 			text += `<span class="textaligned-typeicons">${types.map(type => Dex.getTypeIcon(type)).join(' ')}</span>`;
 			if (pokemon.terastallized) {
 				text += `&nbsp; &nbsp; <small>(base: <span class="textaligned-typeicons">${this.getPokemonTypes(pokemon, true).map(type => Dex.getTypeIcon(type)).join(' ')}</span>)</small>`;
 			} else if (knownPokemon.teraType && !this.battle.rules['Terastal Clause']) {
 				text += `&nbsp; &nbsp; <small>(Tera Type: <span class="textaligned-typeicons">${Dex.getTypeIcon(knownPokemon.teraType)}</span>)</small>`;
 			}
+
 			text += `</h2>`;
 		}
 
@@ -1500,7 +1537,13 @@ export class BattleTooltips {
 		const tr = Math.trunc || Math.floor;
 		const species = pokemon.getSpecies();
 		let rules = this.battle.rules;
-		let baseSpe = species.baseStats.spe;
+		let baseSpe = 0;
+		if (pokemon.fusion) {
+			const bodySpecies = this.battle.dex.species.get(pokemon.fusion);
+			baseSpe = getSpeedStat(species, bodySpecies);
+		} else {
+			baseSpe = species.baseStats.spe;
+		}
 		if (rules['Scalemons Mod']) {
 			const bstWithoutHp = species.bst - species.baseStats.hp;
 			const scale = 600 - species.baseStats.hp;
@@ -2470,6 +2513,13 @@ export class BattleTooltips {
 		return value;
 	}
 	getPokemonTypes(pokemon: Pokemon | ServerPokemon, preterastallized = false): readonly Dex.TypeName[] {
+		const headPokemonSpecies = this.battle.dex.species.get(pokemon.speciesForme);
+		if (pokemon.fusion) {
+			const bodyPokemonSpecies = this.battle.dex.species.get(pokemon.fusion);
+			return getFusionTypes(headPokemonSpecies, bodyPokemonSpecies);
+
+		}
+
 		if (!(pokemon as Pokemon).getTypes) {
 			return this.battle.dex.species.get(pokemon.speciesForme).types;
 		}
@@ -2505,8 +2555,17 @@ export class BattleTooltips {
 			} else {
 				const speciesForme = clientPokemon.getSpeciesForme() || serverPokemon?.speciesForme || '';
 				const species = this.battle.dex.species.get(speciesForme);
+
+				let bodyPokemonSpecies;
+				let bodyPokemonSpeciesAbilities: Species['abilities'] = { 0: '' };
+				if (clientPokemon.fusion) {
+					bodyPokemonSpecies = this.battle.dex.species.get(clientPokemon.fusion);
+					bodyPokemonSpeciesAbilities = { 0: '', ...Object.values(bodyPokemonSpecies.abilities) };
+				}
+
 				if (species.exists && species.abilities) {
-					abilityData.possibilities = Object.values(species.abilities);
+					abilityData.possibilities = [...Object.values(species.abilities),
+						...Object.values(bodyPokemonSpeciesAbilities)];
 					if (this.battle.rules['Frantic Fusions Mod']) {
 						const fusionSpecies = this.battle.dex.species.get(clientPokemon.name);
 						if (fusionSpecies.exists && fusionSpecies.name !== species.name) {

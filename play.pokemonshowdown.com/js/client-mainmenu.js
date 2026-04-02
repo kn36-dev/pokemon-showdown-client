@@ -1103,16 +1103,16 @@
 		// buttons
 		search: function (i, button) {
 			if (!window.BattleFormats) return;
-			this.requestNotifications();
+			// this.requestNotifications();
 			var $searchForm = $(button).closest('form');
 			if ($searchForm.find('.cancel').length) {
 				return;
 			}
 
-			if (!app.user.get('named')) {
-				app.addPopup(LoginPopup);
-				return;
-			}
+			// if (!app.user.get('named')) {
+			// 	app.addPopup(LoginPopup);
+			// 	return;
+			// }
 
 			var $formatButton = $searchForm.find('button[name=format]');
 			var $teamButton = $searchForm.find('button[name=team]');

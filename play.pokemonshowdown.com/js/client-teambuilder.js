@@ -8,6 +8,7 @@
 		title: 'Teambuilder',
 		initialize: function () {
 			teams = Storage.teams;
+			// console.log({ teamsInInitialize: teams });
 
 			// left menu
 			this.$el.addClass('ps-room-light').addClass('scrollable');
@@ -68,6 +69,8 @@
 
 			// teambuilder events
 			'click .utilichart a': 'chartClick',
+			'click .deleteFusion': 'deleteFusion',
+			'click .swapFusion': 'swapFusion',
 			'keydown .chartinput': 'chartKeydown',
 			'keyup .chartinput': 'chartKeyup',
 			'focus .chartinput': 'chartFocus',
@@ -113,6 +116,7 @@
 				var team = this.curTeam;
 				this.curTeam = null;
 				Storage.activeSetList = this.curSetList = null;
+				// console.log("saveTeam triggered when clicking back: ", team);
 				Storage.saveTeam(team);
 			} else {
 				return;
@@ -131,6 +135,8 @@
 		curSet: null,
 		curSetLoc: 0,
 
+		isCustomNicknameSet: false,
+
 		// curFolder will have '/' at the end if it's a folder, but
 		// it will be alphanumeric (so guaranteed no '/') if it's a
 		// format
@@ -148,6 +154,7 @@
 		formatResources: {},
 		update: function () {
 			teams = Storage.teams;
+			// console.log({ teamsInUpdate: teams });
 			if (this.curTeam) {
 				if (this.curTeam.format && !this.formatResources[this.curTeam.format]) {
 					this.tryLoadFormatResource(this.curTeam.format);
@@ -385,6 +392,7 @@
 		},
 		updateTeamList: function (resetScroll) {
 			var teams = Storage.teams;
+			// console.log({ teamsInUpdateTeamList: teams });
 			var buf = '';
 
 			// teampane
@@ -451,6 +459,8 @@
 					if (i >= teams.length) break;
 
 					var team = teams[i];
+
+					// console.log("team at index ", i, ": ", team);
 
 					if (team && !team.team && team.team !== '') {
 						team = null;
@@ -698,6 +708,7 @@
 					team.folder = name;
 					if (window.nodewebkit) Storage.saveTeam(team);
 				}
+				// console.log("saveTeams called at line 702 in client-teambuilder");
 				if (!window.nodewebkit) Storage.saveTeams();
 				self.selectFolder(name + '/');
 			} });
@@ -718,6 +729,7 @@
 				if (addName) team.name = oldFolder + ' ' + team.name;
 				if (window.nodewebkit) Storage.saveTeam(team);
 			}
+			// console.log("saveTeams called at line 723 in client-teambuilder");
 			if (!window.nodewebkit) Storage.saveTeams();
 			this.selectFolder('/');
 		},
@@ -808,6 +820,7 @@
 			Storage.deleteAllTeams();
 			Storage.importTeam(this.$('.teamedit textarea').val(), true);
 			teams = Storage.teams;
+			// console.log({ teamsInSaveBackup: teams });
 			Storage.saveAllTeams();
 			for (var room in app.rooms) {
 				var selection = app.rooms[room].$('button.teamselect').val();
@@ -961,7 +974,7 @@
 			// }
 			var contents = Storage.exportTeam(team.team, team.gen).replace(/\n/g, '\r\n');
 			var downloadurl = "text/plain:" + filename + ":" + urlprefix + encodeURIComponent(window.btoa(unescape(encodeURIComponent(contents))));
-			console.log(downloadurl);
+			// console.log(downloadurl);
 			dataTransfer.setData("DownloadURL", downloadurl);
 
 			app.dragging = e.currentTarget;
@@ -1287,8 +1300,8 @@
 		renderSet: function (set, i) {
 			var species = this.curTeam.dex.species.get(set.species);
 			var isLetsGo = this.curTeam.format.includes('letsgo');
-			var isBDSP = this.curTeam.format.includes('bdsp');
-			var isNatDex = this.curTeam.format.includes('nationaldex') || this.curTeam.format.includes('natdex');
+			// var isBDSP = this.curTeam.format.includes('bdsp');
+			// var isNatDex = this.curTeam.format.includes('nationaldex') || this.curTeam.format.includes('natdex');
 			var buf = '<li value="' + i + '">';
 			if (!set.species) {
 				if (this.deletedSet) {
@@ -1299,7 +1312,7 @@
 				buf += '</li>';
 				return buf;
 			}
-			buf += '<div class="setmenu"><button name="copySet"><i class="fa fa-files-o"></i>Copy</button> <button name="importSet"><i class="fa fa-upload"></i>Import/Export</button> <button name="moveSet"><i class="fa fa-arrows"></i>Move</button> <button name="deleteSet"><i class="fa fa-trash"></i>Delete</button></div>';
+			buf += '<div class="setmenu"><button class="chartinput" name="swapFusion"><i class="fa fa-random"></i>Swap</button> <button name="copySet"><i class="fa fa-files-o"></i>Copy</button> <button name="importSet"><i class="fa fa-upload"></i>Import/Export</button> <button name="moveSet"><i class="fa fa-arrows"></i>Move</button> <button name="deleteSet"><i class="fa fa-trash"></i>Delete</button></div>';
 			buf += '<div class="setchart-nickname">';
 			buf += '<label>Nickname</label><input type="text" name="nickname" class="textbox" value="' + BattleLog.escapeHTML(set.name || '') + '" placeholder="' + BattleLog.escapeHTML(species.baseSpecies) + '" />';
 			buf += '</div>';
@@ -1314,6 +1327,13 @@
 			}
 			buf += '<div class="setcell setcell-pokemon"><label>Pok&eacute;mon</label><input type="text" name="pokemon" class="textbox chartinput" value="' + BattleLog.escapeHTML(set.species) + '" autocomplete="off" /></div></div>';
 
+			// --- ADD THIS BLOCK ---
+			// New Fusion/Body cell
+			buf += '<div class="setcell setcell-fusion"><label>Fusion/Body</label>';
+			buf += '<input type="text" name="fusion" class="textbox chartinput rainbow" value="' + BattleLog.escapeHTML(set.fusionSet && set.fusionSet.name ? set.fusionSet.name : '') + '" autocomplete="off">';
+			buf += '<button class="chartinput closebutton" name="deleteFusion" aria-label="Delete" style="position:absolute;top: -1px;right: 1px;"><i class="fa fa-times-circle"></i></button></div>';
+			// ----------------------
+
 			// details
 			buf += '<div class="setcol setcol-details"><div class="setrow">';
 			buf += '<div class="setcell setcell-details"><label>Details</label><button class="textbox setdetails" tabindex="-1" name="details">';
@@ -1326,33 +1346,33 @@
 			buf += '<span class="detailcell detailcell-first"><label>Level</label>' + (set.level || 100) + '</span>';
 			if (this.curTeam.gen > 1) {
 				buf += '<span class="detailcell"><label>Gender</label>' + GenderChart[set.gender || species.gender || 'N'] + '</span>';
-				if (isLetsGo) {
-					buf += '<span class="detailcell"><label>Happiness</label>' + (typeof set.happiness === 'number' ? set.happiness : 70) + '</span>';
-				} else if (this.curTeam.gen < 8 || isNatDex) {
-					buf += '<span class="detailcell"><label>Happiness</label>' + (typeof set.happiness === 'number' ? set.happiness : 255) + '</span>';
-				}
+				// if (isLetsGo) {
+				// 	buf += '<span class="detailcell"><label>Happiness</label>' + (typeof set.happiness === 'number' ? set.happiness : 70) + '</span>';
+				// } else if (this.curTeam.gen < 8 || isNatDex) {
+				// 	buf += '<span class="detailcell"><label>Happiness</label>' + (typeof set.happiness === 'number' ? set.happiness : 255) + '</span>';
+				// }
 				buf += '<span class="detailcell"><label>Shiny</label>' + (set.shiny ? 'Yes' : 'No') + '</span>';
-				if (!isLetsGo && this.curTeam.gen < 9) {
-					if (this.curTeam.gen === 8 && !isNatDex) {
-						if (isBDSP && species.baseSpecies === "Unown") {
-							buf += '<span class="detailcell"><label>HP Type</label>' + (set.hpType || 'Dark') + '</span>';
-						}
-						// Hidden Power isn't in normal Gen 8
-					} else {
-						buf += '<span class="detailcell"><label>HP Type</label>' + (set.hpType || 'Dark') + '</span>';
-					}
-				}
-				if (this.curTeam.gen === 8 && !isBDSP) {
-					if (!species.cannotDynamax && set.dynamaxLevel !== 10 && set.dynamaxLevel !== undefined) {
-						buf += '<span class="detailcell"><label>Dmax Level</label>' + (typeof set.dynamaxLevel === 'number' ? set.dynamaxLevel : 10) + '</span>';
-					}
-					if (species.canGigantamax || species.forme === 'Gmax') {
-						buf += '<span class="detailcell"><label>Gmax</label>' + (set.gigantamax || species.forme === 'Gmax' ? 'Yes' : 'No') + '</span>';
-					}
-				}
-				if (this.curTeam.gen === 9) {
-					buf += '<span class="detailcell"><label>Tera Type</label>' + (set.teraType || species.requiredTeraType || species.types[0]) + '</span>';
-				}
+				// if (!isLetsGo && this.curTeam.gen < 9) {
+				// 	if (this.curTeam.gen === 8 && !isNatDex) {
+				// 		if (isBDSP && species.baseSpecies === "Unown") {
+				// 			buf += '<span class="detailcell"><label>HP Type</label>' + (set.hpType || 'Dark') + '</span>';
+				// 		}
+				// 		// Hidden Power isn't in normal Gen 8
+				// 	} else {
+				// 		buf += '<span class="detailcell"><label>HP Type</label>' + (set.hpType || 'Dark') + '</span>';
+				// 	}
+				// }
+				// if (this.curTeam.gen === 8 && !isBDSP) {
+				// 	if (!species.cannotDynamax && set.dynamaxLevel !== 10 && set.dynamaxLevel !== undefined) {
+				// 		buf += '<span class="detailcell"><label>Dmax Level</label>' + (typeof set.dynamaxLevel === 'number' ? set.dynamaxLevel : 10) + '</span>';
+				// 	}
+				// 	if (species.canGigantamax || species.forme === 'Gmax') {
+				// 		buf += '<span class="detailcell"><label>Gmax</label>' + (set.gigantamax || species.forme === 'Gmax' ? 'Yes' : 'No') + '</span>';
+				// 	}
+				// }
+				// if (this.curTeam.gen === 9) {
+				// 	buf += '<span class="detailcell"><label>Tera Type</label>' + (set.teraType || species.requiredTeraType || species.types[0]) + '</span>';
+				// }
 			}
 			buf += '</button></div></div>';
 
@@ -1367,7 +1387,8 @@
 			buf += itemicon;
 			buf += '</div>';
 			buf += '<div class="setcell setcell-typeicons">';
-			var types = species.types;
+
+			var types = BattleFusion.getFusionTypes(species, set.fusionSet);
 			if (types) {
 				for (var i = 0; i < types.length; i++) buf += Dex.getTypeIcon(types[i]);
 			}
@@ -1389,7 +1410,18 @@
 
 			// stats
 			buf += '<div class="setcol setcol-stats"><div class="setrow"><label>Stats</label><button class="textbox setstats" name="stats">';
-			buf += '<span class="statrow statrow-head"><label></label> <span class="statgraph"></span> <em>' + (!isLetsGo ? 'EV' : 'AV') + '</em></span>';
+
+			var baseStats = BattleFusion.getBaseStats(set, this.curTeam.dex);
+			var baseStatValues = Object.values(baseStats);
+			var totalBaseStats = 0;
+			for (var statIndex = 0; statIndex < baseStatValues.length; statIndex++) {
+				totalBaseStats += baseStatValues[statIndex];
+			}
+
+			var weight = BattleFusion.getFusionWeight(set);
+			// Total base stat and weight
+			buf += '<span class="statrow statrow-head"><label style="width: 113px; text-align:left">' + "BST: " + totalBaseStats + " KG: " + weight + '</label><em>' + (!isLetsGo ? 'EV' : 'AV') + '</em></span>';
+
 			var stats = {};
 			var defaultEV = (this.curTeam.gen > 2 ? 0 : 252);
 			for (var j in BattleStatNames) {
@@ -1456,6 +1488,7 @@
 					}
 				});
 			} else {
+				// console.log("this.curSetList assigned in 1477");
 				Storage.activeSetList = this.curSetList = Storage.importTeam(text);
 				this.back();
 			}
@@ -1526,12 +1559,16 @@
 							typeTable = typeTable.filter(function (type) {
 								return species.types.includes(type);
 							});
+							// console.log("addPokemon: species: ", species);
+							// console.log("addPokemon: typeTable: ", species);
+
 							if (!typeTable.length) break;
 						}
 					}
 				}
 				if (typeTable.length === 1) {
 					this.search.engine.addFilter(['type', typeTable[0]]);
+					// console.log("addPokemon: search filters: ", this.search.engine.filters);
 					this.search.filters = this.search.engine.filters;
 					this.search.find('');
 				}
@@ -1555,6 +1592,7 @@
 			if (this.curTeam) {
 				Storage.saveTeam(this.curTeam);
 			} else {
+				// console.log("saveTeams called at line 1568 in client-teambuilder");
 				Storage.saveTeams();
 			}
 		},
@@ -1572,6 +1610,7 @@
 			if (window.BattleFormats && BattleFormats[format] && BattleFormats[format].battleFormat) {
 				format = BattleFormats[format].battleFormat;
 			}
+			// console.log("What is the team sent? ", this.curTeam);
 			app.sendTeam(this.curTeam, function () {
 				app.send('/vtm ' + format);
 			});
@@ -1625,6 +1664,7 @@
 			var i = +$(e.currentTarget).closest('li').attr('value');
 			var set = this.curSetList[i];
 			var name = $.trim(e.currentTarget.value).replace(/\|/g, '');
+			if (name !== "") this.isCustomNicknameSet = true;
 			e.currentTarget.value = set.name = name;
 			this.save();
 		},
@@ -1957,7 +1997,6 @@
 		/*********************************************************
 		 * Set view
 		 *********************************************************/
-
 		updateSetView: function () {
 			// pokemon
 			var buf = '<div class="pad">';
@@ -2002,6 +2041,7 @@
 			this.$('.teambar').html(this.renderTeambar());
 			this.$('.teamchart').first().html(this.renderSet(this.curSet, this.curSetLoc));
 		},
+		computeUpdatedSet: function () {},
 		renderTeambar: function () {
 			var buf = '';
 			var isAdd = false;
@@ -2060,8 +2100,17 @@
 
 			var supportsEVs = !this.curTeam.format.includes('letsgo');
 
-			// stat cell
-			var buf = '<span class="statrow statrow-head"><label></label> <span class="statgraph"></span> <em>' + (supportsEVs ? 'EV' : 'AV') + '</em></span>';
+			var baseStats = BattleFusion.getBaseStats(set, this.curTeam.dex);
+			var baseStatValues = Object.values(baseStats);
+			var totalBaseStats = 0;
+			for (var statIndex = 0; statIndex < baseStatValues.length; statIndex++) {
+				totalBaseStats += baseStatValues[statIndex];
+			}
+
+			var weight = BattleFusion.getFusionWeight(set);
+			// Total base stat and weight
+			var buf = '<span class="statrow statrow-head"><label style="width: 113px; text-align:left">' + "BST: " + totalBaseStats + " KG: " + weight + '</label><em>' + (supportsEVs ? 'EV' : 'AV') + '</em></span>';
+
 			var defaultEV = (this.curTeam.gen > 2 ? 0 : 252);
 			for (var stat in stats) {
 				if (stat === 'spd' && this.curTeam.gen === 1) continue;
@@ -2280,7 +2329,7 @@
 			var set = this.curSet;
 			var species = this.curTeam.dex.species.get(this.curSet.species);
 
-			var baseStats = species.baseStats;
+			var baseStats = BattleFusion.getBaseStats(this.curSet, this.curTeam.dex);
 
 			buf += '<div class="resultheader"><h3>EVs</h3></div>';
 			buf += '<div class="statform">';
@@ -2869,32 +2918,32 @@
 				}
 				buf += '</div></div>';
 
-				if (isLetsGo) {
-					buf += '<div class="formrow"><label class="formlabel">Happiness:</label><div><input type="number" name="happiness" value="70" class="textbox inputform numform" /></div></div>';
-				} else {
-					if (this.curTeam.gen < 8 || isNatDex) buf += '<div class="formrow"><label class="formlabel">Happiness:</label><div><input type="number" min="0" max="255" step="1" name="happiness" value="' + (typeof set.happiness === 'number' ? set.happiness : 255) + '" class="textbox inputform numform" /></div></div>';
-				}
+				// if (isLetsGo) {
+				// 	buf += '<div class="formrow"><label class="formlabel">Happiness:</label><div><input type="number" name="happiness" value="70" class="textbox inputform numform" /></div></div>';
+				// } else {
+				// 	if (this.curTeam.gen < 8 || isNatDex) buf += '<div class="formrow"><label class="formlabel">Happiness:</label><div><input type="number" min="0" max="255" step="1" name="happiness" value="' + (typeof set.happiness === 'number' ? set.happiness : 255) + '" class="textbox inputform numform" /></div></div>';
+				// }
 
-				buf += '<div class="formrow"><label class="formlabel">Shiny:</label><div>';
-				buf += '<label class="checkbox inline"><input type="radio" name="shiny" value="yes"' + (set.shiny ? ' checked' : '') + ' /> Yes</label> ';
-				buf += '<label class="checkbox inline"><input type="radio" name="shiny" value="no"' + (!set.shiny ? ' checked' : '') + ' /> No</label>';
-				buf += '</div></div>';
+				// buf += '<div class="formrow"><label class="formlabel">Shiny:</label><div>';
+				// buf += '<label class="checkbox inline"><input type="radio" name="shiny" value="yes"' + (set.shiny ? ' checked' : '') + ' /> Yes</label> ';
+				// buf += '<label class="checkbox inline"><input type="radio" name="shiny" value="no"' + (!set.shiny ? ' checked' : '') + ' /> No</label>';
+				// buf += '</div></div>';
 
-				if (this.curTeam.gen === 8 && !isBDSP) {
-					if (!species.cannotDynamax) {
-						buf += '<div class="formrow"><label class="formlabel">Dmax Level:</label><div><input type="number" min="0" max="10" step="1" name="dynamaxlevel" value="' + (typeof set.dynamaxLevel === 'number' ? set.dynamaxLevel : 10) + '" class="textbox inputform numform" /></div></div>';
-					}
-					if (species.canGigantamax || species.forme === 'Gmax') {
-						buf += '<div class="formrow"><label class="formlabel">Gigantamax:</label><div>';
-						if (species.forme === 'Gmax') {
-							buf += 'Yes';
-						} else {
-							buf += '<label class="checkbox inline"><input type="radio" name="gigantamax" value="yes"' + (set.gigantamax ? ' checked' : '') + ' /> Yes</label> ';
-							buf += '<label class="checkbox inline"><input type="radio" name="gigantamax" value="no"' + (!set.gigantamax ? ' checked' : '') + ' /> No</label>';
-						}
-						buf += '</div></div>';
-					}
-				}
+				// if (this.curTeam.gen === 8 && !isBDSP) {
+				// 	if (!species.cannotDynamax) {
+				// 		buf += '<div class="formrow"><label class="formlabel">Dmax Level:</label><div><input type="number" min="0" max="10" step="1" name="dynamaxlevel" value="' + (typeof set.dynamaxLevel === 'number' ? set.dynamaxLevel : 10) + '" class="textbox inputform numform" /></div></div>';
+				// 	}
+				// 	if (species.canGigantamax || species.forme === 'Gmax') {
+				// 		buf += '<div class="formrow"><label class="formlabel">Gigantamax:</label><div>';
+				// 		if (species.forme === 'Gmax') {
+				// 			buf += 'Yes';
+				// 		} else {
+				// 			buf += '<label class="checkbox inline"><input type="radio" name="gigantamax" value="yes"' + (set.gigantamax ? ' checked' : '') + ' /> Yes</label> ';
+				// 			buf += '<label class="checkbox inline"><input type="radio" name="gigantamax" value="no"' + (!set.gigantamax ? ' checked' : '') + ' /> No</label>';
+				// 		}
+				// 		buf += '</div></div>';
+				// 	}
+				// }
 			}
 
 			if (this.curTeam.gen > 2) {
@@ -2907,28 +2956,28 @@
 				buf += '</select></div></div>';
 			}
 
-			if (!isLetsGo && (this.curTeam.gen === 7 || isNatDex || (isBDSP && species.baseSpecies === 'Unown'))) {
-				buf += '<div class="formrow"><label class="formlabel" title="Hidden Power Type">Hidden Power:</label><div><select name="hptype" class="button">';
-				buf += '<option value=""' + (!set.hpType ? ' selected="selected"' : '') + '>(automatic type)</option>'; // unset
-				var types = Dex.types.all();
-				for (var i = 0; i < types.length; i++) {
-					if (types[i].HPivs) {
-						buf += '<option value="' + types[i].name + '"' + (set.hpType === types[i].name ? ' selected="selected"' : '') + '>' + types[i].name + '</option>';
-					}
-				}
-				buf += '</select></div></div>';
-			}
+			// if (!isLetsGo && (this.curTeam.gen === 7 || isNatDex || (isBDSP && species.baseSpecies === 'Unown'))) {
+			// 	buf += '<div class="formrow"><label class="formlabel" title="Hidden Power Type">Hidden Power:</label><div><select name="hptype" class="button">';
+			// 	buf += '<option value=""' + (!set.hpType ? ' selected="selected"' : '') + '>(automatic type)</option>'; // unset
+			// 	var types = Dex.types.all();
+			// 	for (var i = 0; i < types.length; i++) {
+			// 		if (types[i].HPivs) {
+			// 			buf += '<option value="' + types[i].name + '"' + (set.hpType === types[i].name ? ' selected="selected"' : '') + '>' + types[i].name + '</option>';
+			// 		}
+			// 	}
+			// 	buf += '</select></div></div>';
+			// }
 
-			if (this.curTeam.gen === 9) {
-				buf += '<div class="formrow"><label class="formlabel" title="Tera Type">Tera Type:</label><div>';
-				buf += '<select name="teratype" class="button">';
-				var types = Dex.types.all();
-				var teraType = set.teraType || species.requiredTeraType || species.types[0];
-				for (var i = 0; i < types.length; i++) {
-					buf += '<option value="' + types[i].name + '"' + (teraType === types[i].name ? ' selected="selected"' : '') + '>' + types[i].name + '</option>';
-				}
-				buf += '</select></div></div>';
-			}
+			// if (this.curTeam.gen === 9) {
+			// 	buf += '<div class="formrow"><label class="formlabel" title="Tera Type">Tera Type:</label><div>';
+			// 	buf += '<select name="teratype" class="button">';
+			// 	var types = Dex.types.all();
+			// 	var teraType = set.teraType || species.requiredTeraType || species.types[0];
+			// 	for (var i = 0; i < types.length; i++) {
+			// 		buf += '<option value="' + types[i].name + '"' + (teraType === types[i].name ? ' selected="selected"' : '') + '>' + types[i].name + '</option>';
+			// 	}
+			// 	buf += '</select></div></div>';
+			// }
 
 			buf += '</form>';
 			if (species.cosmeticFormes) {
@@ -3069,9 +3118,11 @@
 			move3: 'move',
 			move4: 'move',
 			stats: 'stats',
-			details: 'details'
+			details: 'details',
+			fusion: 'pokemon'
 		},
 		chartClick: function (e) {
+			// console.log("Chart Click!");
 			if (this.search.addFilter(e.currentTarget)) {
 				var curChart = this.$('input[name=' + this.curChartName + ']');
 				// if we were searching for the filter, remove it
@@ -3108,6 +3159,7 @@
 			this.chartSet(val, true);
 		},
 		chartKeydown: function (e) {
+			// console.log("Chart Key Down!");
 			var modifier = (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.cmdKey);
 			if (e.keyCode === 13 || (e.keyCode === 9 && !modifier)) { // enter/tab
 				if (!(this.curChartType in this.searchChartTypes)) return;
@@ -3168,9 +3220,11 @@
 			}
 		},
 		chartKeyup: function () {
+			// console.log("Chart KeyUp!");
 			this.updateChart();
 		},
 		chartFocus: function (e) {
+			// console.log("Chart Focus!");
 			var $target = $(e.currentTarget);
 			var name = e.currentTarget.name;
 			var type = this.chartTypes[name];
@@ -3200,6 +3254,7 @@
 			this.updateChart(false, wasIncomplete);
 		},
 		chartChange: function (e, selectNext) {
+			// console.log("Chart Change!: ", e.currentTarget.value);
 			var name = e.currentTarget.name;
 			if (this.curChartName !== name) return;
 			var id = toID(e.currentTarget.value);
@@ -3208,6 +3263,9 @@
 			var format = this.curTeam.format;
 			switch (name) {
 			case 'pokemon':
+				val = (id in BattlePokedex ? this.curTeam.dex.species.get(e.currentTarget.value).name : '');
+				break;
+			case 'fusion':
 				val = (id in BattlePokedex ? this.curTeam.dex.species.get(e.currentTarget.value).name : '');
 				break;
 			case 'ability':
@@ -3337,13 +3395,18 @@
 			}
 		},
 		chartSet: function (val, selectNext) {
+			// console.log("Chart Set!: ", val);
 			var inputName = this.curChartName;
 			var input = this.$('input[name=' + inputName + ']');
 			if (this.chartSetCustom(input.val())) return;
 			input.val(val).removeClass('incomplete');
+
 			switch (inputName) {
 			case 'pokemon':
 				this.setPokemon(val, selectNext);
+				break;
+			case 'fusion':
+				this.setFusion(val, selectNext);
 				break;
 			case 'item':
 				this.curSet.item = val;
@@ -3387,6 +3450,7 @@
 					this.$('button.setstats').focus();
 				}
 				break;
+
 			}
 			this.save();
 		},
@@ -3523,9 +3587,18 @@
 				set.ivs['atk'] = (hasHiddenPower ? 30 + (set.ivs['atk'] % 2) : 31);
 			}
 		},
+		updateNickname: function () {
+			var set = this.curSet;
+			var nickname = 'test';
+			set.name = nickname;
+			this.updateSetTop();
+		},
 		setPokemon: function (val, selectNext) {
 			var set = this.curSet;
 			var species = this.curTeam.dex.species.get(val);
+
+			console.log({ valInSetPokemon: val, species: species });
+
 			if (!species.exists || set.species === species.name) {
 				if (selectNext) this.$('input[name=item]').select();
 				return;
@@ -3572,8 +3645,84 @@
 			set.evs = {};
 			set.ivs = {};
 			set.nature = '';
+			set.weightkg = species.weightkg;
+
+			// --- START NICKNAME AUTO-UPDATE ---
+			if (set.fusionSet && set.fusionSet.baseSpecies) {
+				var shouldUpdate = ((this.curSet.name === "" || this.curSet.name === species.name) && (this.isCustomNicknameSet === false));
+
+				if (shouldUpdate) {
+					set.name = BattleFusion.getFusionNickname(this.curSet);
+				}
+			}
+			// --- END NICKNAME AUTO-UPDATE ---
+
 			this.updateSetTop();
 			if (selectNext) this.$(set.item || !this.$('input[name=item]').length ? (this.$('input[name=ability]').length ? 'input[name=ability]' : 'input[name=move1]') : 'input[name=item]').select();
+		},
+		setFusion: function (val, selectNext) {
+			if (val === '') {
+				this.curSet.fusionSet = null;
+				this.updateSetTop();
+				return;
+			}
+
+			var species = this.curTeam.dex.species.get(val);
+
+			console.log({ valInSetFusion: val, species: species });
+
+			this.curSet.fusionSet = species;
+
+			if (!species.exists || (this.curSet.fusionSet.species && this.curSet.fusionSet.species === species.name)) {
+				if (selectNext) this.$('input[name=item]').select();
+				return;
+			}
+
+			// --- START NICKNAME AUTO-UPDATE ---
+			var headSpeciesName = this.curTeam.dex.species.get(this.curSet.species).name;
+
+			// Calculate what the "Old" default nickname would have been
+			// If the name is currently empty, just the head name, or the previous combo, we consider it "Not Custom"
+			// Note: We can't easily know the *previous* body name here without extra state,
+			// but checking if the name *Starts With* the head name is a safe heuristic for fusions.
+			var shouldUpdate = ((this.curSet.name === "" || this.curSet.name === headSpeciesName) && (this.isCustomNicknameSet === false));
+
+			if (shouldUpdate) {
+				this.curSet.name = BattleFusion.getFusionNickname(this.curSet);
+			}
+			// --- END NICKNAME AUTO-UPDATE ---
+
+			this.updateSetTop();
+			if (selectNext) this.$(this.curSet.fusionSet.item || !this.$('input[name=item]').length ? (this.$('input[name=ability]').length ? 'input[name=ability]' : 'input[name=move1]') : 'input[name=item]').select();
+		},
+		deleteFusion: function () {
+			// --- START NICKNAME AUTO-UPDATE ---
+			// Check if we need to revert the name
+			var shouldUpdate = (this.curSet.name === BattleFusion.getFusionNickname(this.curSet)) && (this.isCustomNicknameSet === false);
+
+			if (this.curSet && this.curSet.fusionSet) {
+				delete this.curSet.fusionSet;
+			}
+
+			if (shouldUpdate) {
+				this.curSet.name = ""; // Resets to standard species name
+			}
+			// --- END NICKNAME AUTO-UPDATE ---
+
+			this.updateSetTop();
+		},
+		swapFusion: function () {
+			if (!this.curSet.fusionSet || !this.curSet.fusionSet.baseSpecies) return;
+			// console.log("Before set fusion");
+
+			var headPokemonSpecies = this.curSet.species;
+			var bodyPokemonSpecies = this.curSet.fusionSet.baseSpecies;
+
+			this.setFusion(headPokemonSpecies);
+			// console.log("After set fusion, ready to set pokemon");
+			this.setPokemon(bodyPokemonSpecies);
+			// console.log("After set pokemon");
+			this.updateSetTop();
 		},
 
 		/*********************************************************
@@ -3606,7 +3755,10 @@
 			if (!set.level) set.level = 100;
 			if (typeof set.ivs[stat] === 'undefined') set.ivs[stat] = 31;
 
-			var baseStat = species.baseStats[stat];
+			// KN: part 2 Here we need to calculate the fusion base stat if the format is fusion
+			var baseStat = BattleFusion.getBaseStat(stat, set, this.curTeam.dex);
+			// var baseStat = species.baseStats[stat];
+
 			var iv = (set.ivs[stat] || 0);
 			if (this.curTeam.gen <= 2) iv &= 30;
 			var ev = set.evs[stat];
@@ -3616,8 +3768,11 @@
 			if (stat === 'hp') {
 				if (baseStat === 1) return 1;
 				if (!supportsEVs) return Math.floor(Math.floor(2 * baseStat + iv + 100) * set.level / 100 + 10) + (supportsAVs ? ev : 0);
+
+				// HP formula
 				return Math.floor(Math.floor(2 * baseStat + iv + Math.floor(ev / 4) + 100) * set.level / 100 + 10);
 			}
+			// other stats formula
 			var val = Math.floor(Math.floor(2 * baseStat + iv + Math.floor(ev / 4)) * set.level / 100 + 5);
 			if (!supportsEVs) {
 				val = Math.floor(Math.floor(2 * baseStat + iv) * set.level / 100 + 5);
@@ -3634,6 +3789,10 @@
 				val = Math.floor(val) * friendshipValue / 100 + (supportsAVs ? ev : 0);
 			}
 			return Math.floor(val);
+		},
+
+		getBaseStat: function (stat, species) {
+
 		},
 
 		// initialization

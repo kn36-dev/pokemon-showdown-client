@@ -14,7 +14,7 @@
 import { Dex, type ModdedDex, toID, type ID } from "./battle-dex";
 
 export type SearchType = (
-	'pokemon' | 'type' | 'tier' | 'move' | 'item' | 'ability' | 'egggroup' | 'category' | 'article'
+	'pokemon' | 'type' | 'tier' | 'move' | 'item' | 'ability' | 'egggroup' | 'category' | 'article' | 'fusion'
 );
 
 export type SearchRow = (
@@ -89,6 +89,9 @@ export class DexSearch {
 
 	getTypedSearch(searchType: SearchType | '', format = '' as ID, speciesOrSet: ID | Dex.PokemonSet = '' as ID) {
 		if (!searchType) return null;
+
+		// console.log({ searchTypeInGetTypedSearch: searchType });
+
 		switch (searchType) {
 		case 'pokemon': return new BattlePokemonSearch('pokemon', format, speciesOrSet);
 		case 'item': return new BattleItemSearch('item', format, speciesOrSet);
@@ -125,6 +128,7 @@ export class DexSearch {
 			this.filters = null;
 			this.sortCol = null;
 		}
+		// console.log({ searchTypeInSetType: searchType });
 		this.typedSearch = this.getTypedSearch(searchType, format, speciesOrSet);
 		if (this.typedSearch) this.dex = this.typedSearch.dex;
 	}
@@ -714,6 +718,7 @@ abstract class BattleTypedSearch<T extends SearchType> {
 
 		this.species = '' as ID;
 		this.set = null;
+		// console.log({ inBattleDexConstructor: speciesOrSet });
 		if (typeof speciesOrSet === 'string') {
 			if (speciesOrSet) this.species = speciesOrSet;
 		} else {
@@ -1083,6 +1088,7 @@ class BattlePokemonSearch extends BattleTypedSearch<'pokemon'> {
 			table.tiers = null;
 		}
 		let tierSet: SearchRow[] = table.tierSet;
+
 		let slices: { [k: string]: number } = table.formatSlices;
 		if (format === 'ubers' || format === 'uber' || format === 'ubersuu' || format === 'nationaldexdoubles') {
 			tierSet = tierSet.slice(slices.Uber);
@@ -1193,6 +1199,41 @@ class BattlePokemonSearch extends BattleTypedSearch<'pokemon'> {
 				return true;
 			});
 		}
+		// This block handles 'generation1' through 'generation9'
+		if (format.startsWith('generation')) {
+			// Extract the number from the end of the string (e.g., "generation5" -> 5)
+			const targetGen = parseInt(format.replace('generation', ''), 10);
+
+			// Ensure we actually got a valid number between 1 and 9
+			if (targetGen >= 1 && targetGen <= 9) {
+				tierSet = tierSet.filter(([type, id]) => {
+					if (type !== 'pokemon') return true; // Keep headers
+					const species = this.dex.species.get(id);
+
+					// Match the Pokemon's origin generation to the number in the format ID
+					const notMega = !species.isMega;
+					const NotPrimal = !species.isPrimal;
+					const notTerapagos = !species.name.includes('Terapagos');
+					const notNecrozmaUltra = species.name !== 'Necrozma-Ultra';
+					const notGreninjaAsh = species.name !== 'Greninja-Ash' && species.name !== 'Greninja-Bond';
+					const notZygardeComplete = species.name !== 'Zygarde-Complete';
+					const notZacianCrowned = species.name !== 'Zacian-Crowned';
+					const notZamazentaCrowned = species.name !== 'Zamazenta-Crowned';
+					const notSameSpecies = this.set ? this.set.species !== species.name : true;
+
+					return species.gen <= targetGen &&
+						notSameSpecies &&
+						notMega &&
+						NotPrimal &&
+						notTerapagos &&
+						notNecrozmaUltra &&
+						notGreninjaAsh &&
+						notZygardeComplete &&
+						notZacianCrowned &&
+						notZamazentaCrowned;
+				});
+			}
+		}
 
 		// Filter out Gmax Pokemon from standard tier selection
 		if (!(/^(battlestadium|vgc|doublesubers)/g.test(format) || (format === 'doubles' && this.formatType === 'natdex'))) {
@@ -1275,60 +1316,75 @@ class BattleAbilitySearch extends BattleTypedSearch<'ability'> {
 	}
 	getBaseResults(): SearchRow[] {
 		if (!this.species) return this.getDefaultResults();
+
 		const format = this.format;
 		const isHackmons = (format.includes('hackmons') || format.endsWith('bh'));
 		const isAAA = (format === 'almostanyability' || format.includes('aaa'));
 		const dex = this.dex;
-		let species = dex.species.get(this.species);
+
+		let allSpecies = [];
+
+		// First we push the default species
+		allSpecies.push(dex.species.get(this.species));
+
+		// Then we push fusion species if available
+		if (this.set?.fusionSet?.baseSpecies) {
+			let fusionSpecies = dex.species.get(this.set.fusionSet.baseSpecies);
+			allSpecies.push(fusionSpecies);
+		}
+
 		let abilitySet: SearchRow[] = [['header', "Abilities"]];
 
-		if (species.isMega) {
-			abilitySet.unshift(['html', `Will be <strong>${species.abilities['0']}</strong> after Mega Evolving.`]);
-			species = dex.species.get(species.baseSpecies);
-		}
-		abilitySet.push(['ability', toID(species.abilities['0'])]);
-		if (species.abilities['1']) {
-			abilitySet.push(['ability', toID(species.abilities['1'])]);
-		}
-		if (species.abilities['H']) {
-			abilitySet.push(['header', "Hidden Ability"]);
-			abilitySet.push(['ability', toID(species.abilities['H'])]);
-		}
-		if (species.abilities['S']) {
-			abilitySet.push(['header', "Special Event Ability"]);
-			abilitySet.push(['ability', toID(species.abilities['S'])]);
-		}
-		if (isAAA || format.includes('metronomebattle') || isHackmons) {
-			let abilities: ID[] = [];
-			for (let i in this.getTable()) {
-				const ability = dex.abilities.get(i);
-				if (ability.isNonstandard) continue;
-				if (ability.gen > dex.gen) continue;
-				abilities.push(ability.id);
-			}
-
-			let goodAbilities: SearchRow[] = [['header', "Abilities"]];
-			let poorAbilities: SearchRow[] = [['header', "Situational Abilities"]];
-			let badAbilities: SearchRow[] = [['header', "Unviable Abilities"]];
-			for (const ability of abilities.sort().map(abil => dex.abilities.get(abil))) {
-				let rating = ability.rating;
-				if (ability.id === 'normalize') rating = 3;
-				if (rating >= 3) {
-					goodAbilities.push(['ability', ability.id]);
-				} else if (rating >= 2) {
-					poorAbilities.push(['ability', ability.id]);
-				} else {
-					badAbilities.push(['ability', ability.id]);
-				}
-			}
-			abilitySet = [...goodAbilities, ...poorAbilities, ...badAbilities];
+		for (let species of allSpecies) {
 			if (species.isMega) {
-				if (isAAA) {
-					abilitySet.unshift(['html', `Will be <strong>${species.abilities['0']}</strong> after Mega Evolving.`]);
+				abilitySet.unshift(['html', `Will be <strong>${species.abilities['0']}</strong> after Mega Evolving.`]);
+				species = dex.species.get(species.baseSpecies);
+			}
+			abilitySet.push(['ability', toID(species.abilities['0'])]);
+			if (species.abilities['1']) {
+				abilitySet.push(['ability', toID(species.abilities['1'])]);
+			}
+			if (species.abilities['H']) {
+				abilitySet.push(['header', "Hidden Ability"]);
+				abilitySet.push(['ability', toID(species.abilities['H'])]);
+			}
+			if (species.abilities['S']) {
+				abilitySet.push(['header', "Special Event Ability"]);
+				abilitySet.push(['ability', toID(species.abilities['S'])]);
+			}
+			if (isAAA || format.includes('metronomebattle') || isHackmons) {
+				let abilities: ID[] = [];
+				for (let i in this.getTable()) {
+					const ability = dex.abilities.get(i);
+					if (ability.isNonstandard) continue;
+					if (ability.gen > dex.gen) continue;
+					abilities.push(ability.id);
 				}
+
+				let goodAbilities: SearchRow[] = [['header', "Abilities"]];
+				let poorAbilities: SearchRow[] = [['header', "Situational Abilities"]];
+				let badAbilities: SearchRow[] = [['header', "Unviable Abilities"]];
+				for (const ability of abilities.sort().map(abil => dex.abilities.get(abil))) {
+					let rating = ability.rating;
+					if (ability.id === 'normalize') rating = 3;
+					if (rating >= 3) {
+						goodAbilities.push(['ability', ability.id]);
+					} else if (rating >= 2) {
+						poorAbilities.push(['ability', ability.id]);
+					} else {
+						badAbilities.push(['ability', ability.id]);
+					}
+				}
+				abilitySet = [...goodAbilities, ...poorAbilities, ...badAbilities];
+				if (species.isMega) {
+					if (isAAA) {
+						abilitySet.unshift(['html', `Will be <strong>${species.abilities['0']}</strong> after Mega Evolving.`]);
+					}
 				// species is unused after this, so no need to replace
+				}
 			}
 		}
+
 		return abilitySet;
 	}
 	filter(row: SearchRow, filters: string[][]) {
@@ -1384,9 +1440,16 @@ class BattleItemSearch extends BattleTypedSearch<'item'> {
 		return table.itemSet;
 	}
 	getBaseResults(): SearchRow[] {
-		if (!this.species) return this.getDefaultResults();
+		if (!this.species) {
+			return this.getDefaultResults();
+		}
 		const speciesName = this.dex.species.get(this.species).name;
-		const results = this.getDefaultResults();
+		const results = this.getDefaultResults().filter(row => {
+			if (row[0] !== 'item') return true;
+			const item = this.dex.items.get(row[1]);
+			return !item.megaStone;
+		});
+		// console.log({ resultsInGetBaseResults: results });
 		const speciesSpecific: SearchRow[] = [];
 		const abilitySpecific: SearchRow[] = [];
 		const abilityItem = {
@@ -1732,7 +1795,18 @@ class BattleMoveSearch extends BattleTypedSearch<'move'> {
 	getBaseResults() {
 		if (!this.species) return this.getDefaultResults();
 		const dex = this.dex;
-		let species = dex.species.get(this.species);
+
+		let allSpecies = [];
+
+		// First we push the default species
+		allSpecies.push(dex.species.get(this.species));
+
+		// Then we push fusion species if available
+		if (this.set?.fusionSet?.baseSpecies) {
+			let fusionSpecies = dex.species.get(this.set.fusionSet.baseSpecies);
+			allSpecies.push(fusionSpecies);
+		}
+
 		const format = this.format;
 		const isHackmons = (format.includes('hackmons') || format.endsWith('bh'));
 		const isSTABmons = (format.includes('stabmons') || format === 'staaabmons');
@@ -1741,171 +1815,223 @@ class BattleMoveSearch extends BattleTypedSearch<'move'> {
 			(/^battle(spot|stadium|festival)/.test(format) || format.startsWith('bss') ||
 				format.startsWith('vgc') || (dex.gen === 9 && this.formatType !== 'natdex' && this.formatType !== 'legendsza'));
 
-		let learnsetid = this.firstLearnsetid(species.id);
+		// KN: Start here
 		let moves: string[] = [];
 		let sketchMoves: string[] = [];
-		let sketch = false;
-		let gen = `${dex.gen}`;
-		let lsetTable = BattleTeambuilderTable;
-		if (this.formatType?.startsWith('bdsp')) lsetTable = lsetTable['gen8bdsp'];
-		if (this.formatType === 'letsgo') lsetTable = lsetTable['gen7letsgo'];
-		if (this.formatType === 'bw1') lsetTable = lsetTable['gen5bw1'];
-		if (this.formatType === 'rs') lsetTable = lsetTable['gen3rs'];
-		if (this.formatType === 'legendsza') lsetTable = lsetTable['gen9legendsou'];
-		if (this.formatType?.startsWith('ssdlc1')) lsetTable = lsetTable['gen8dlc1'];
-		if (this.formatType?.startsWith('predlc')) lsetTable = lsetTable['gen9predlc'];
-		if (this.formatType?.startsWith('svdlc1')) lsetTable = lsetTable['gen9dlc1'];
-		while (learnsetid) {
-			let learnset = lsetTable.learnsets[learnsetid];
-			if (learnset) {
-				for (let moveid in learnset) {
-					let learnsetEntry = learnset[moveid];
-					const move = dex.moves.get(moveid);
-					const minGenCode: { [gen: number]: string } = { 6: 'p', 7: 'q', 8: 'g', 9: 'a' };
-					if (regionBornLegality && !learnsetEntry.includes(minGenCode[dex.gen])) {
-						continue;
+
+		for (let species of allSpecies) {
+			let learnsetid = this.firstLearnsetid(species.id);
+			let sketch = false;
+			let gen = `${dex.gen}`;
+			let lsetTable = BattleTeambuilderTable;
+			if (this.formatType?.startsWith('bdsp')) lsetTable = lsetTable['gen8bdsp'];
+			if (this.formatType === 'letsgo') lsetTable = lsetTable['gen7letsgo'];
+			if (this.formatType === 'bw1') lsetTable = lsetTable['gen5bw1'];
+			if (this.formatType === 'rs') lsetTable = lsetTable['gen3rs'];
+			if (this.formatType === 'legendsza') lsetTable = lsetTable['gen9legendsou'];
+			if (this.formatType?.startsWith('ssdlc1')) lsetTable = lsetTable['gen8dlc1'];
+			if (this.formatType?.startsWith('predlc')) lsetTable = lsetTable['gen9predlc'];
+			if (this.formatType?.startsWith('svdlc1')) lsetTable = lsetTable['gen9dlc1'];
+			while (learnsetid) {
+				let learnset = lsetTable.learnsets[learnsetid];
+				if (learnset) {
+					for (let moveid in learnset) {
+						let learnsetEntry = learnset[moveid];
+						const move = dex.moves.get(moveid);
+						const minGenCode: { [gen: number]: string } = { 6: 'p', 7: 'q', 8: 'g', 9: 'a' };
+						if (regionBornLegality && !learnsetEntry.includes(minGenCode[dex.gen])) {
+							continue;
+						}
+						if (
+							this.eggMovesOnly(learnsetid, species.id) &&
+							(!learnsetEntry.includes('e') || dex.gen !== 9)
+						) {
+							continue;
+						}
+						if (
+							!learnsetEntry.includes(gen) &&
+							(!isTradebacks ? true : !(move.gen <= dex.gen && learnsetEntry.includes(`${dex.gen + 1}`)))
+						) {
+							continue;
+						}
+						if (this.formatType !== 'natdex' && this.formatType !== 'legendsza' && move.isNonstandard === "Past") {
+							continue;
+						}
+						if (
+							this.formatType?.startsWith('dlc1') &&
+							BattleTeambuilderTable['gen8dlc1']?.nonstandardMoves.includes(moveid)
+						) {
+							continue;
+						}
+						if (
+							this.formatType?.includes('predlc') && this.formatType !== 'predlcnatdex' &&
+							BattleTeambuilderTable['gen9predlc']?.nonstandardMoves.includes(moveid)
+						) {
+							continue;
+						}
+						if (
+							this.formatType?.includes('svdlc1') && this.formatType !== 'svdlc1natdex' &&
+							BattleTeambuilderTable['gen9dlc1']?.nonstandardMoves.includes(moveid)
+						) {
+							continue;
+						}
+						if (moves.includes(moveid)) continue;
+						moves.push(moveid);
+						if (moveid === 'sketch') sketch = true;
+
+						// // I don't like hiddenpower in any generation, removed it
+						// if (moveid === 'hiddenpower') {
+						// 	moves.push(
+						// 		'hiddenpowerbug', 'hiddenpowerdark', 'hiddenpowerdragon', 'hiddenpowerelectric', 'hiddenpowerfighting', 'hiddenpowerfire', 'hiddenpowerflying', 'hiddenpowerghost', 'hiddenpowergrass', 'hiddenpowerground', 'hiddenpowerice', 'hiddenpowerpoison', 'hiddenpowerpsychic', 'hiddenpowerrock', 'hiddenpowersteel', 'hiddenpowerwater'
+						// 	);
+						// }
 					}
-					if (
-						this.eggMovesOnly(learnsetid, species.id) &&
-						(!learnsetEntry.includes('e') || dex.gen !== 9)
-					) {
-						continue;
-					}
-					if (
-						!learnsetEntry.includes(gen) &&
-						(!isTradebacks ? true : !(move.gen <= dex.gen && learnsetEntry.includes(`${dex.gen + 1}`)))
-					) {
-						continue;
-					}
-					if (this.formatType !== 'natdex' && this.formatType !== 'legendsza' && move.isNonstandard === "Past") {
-						continue;
-					}
-					if (
-						this.formatType?.startsWith('dlc1') &&
-						BattleTeambuilderTable['gen8dlc1']?.nonstandardMoves.includes(moveid)
-					) {
-						continue;
-					}
-					if (
-						this.formatType?.includes('predlc') && this.formatType !== 'predlcnatdex' &&
-						BattleTeambuilderTable['gen9predlc']?.nonstandardMoves.includes(moveid)
-					) {
-						continue;
-					}
-					if (
-						this.formatType?.includes('svdlc1') && this.formatType !== 'svdlc1natdex' &&
-						BattleTeambuilderTable['gen9dlc1']?.nonstandardMoves.includes(moveid)
-					) {
-						continue;
-					}
-					if (moves.includes(moveid)) continue;
-					moves.push(moveid);
-					if (moveid === 'sketch') sketch = true;
-					if (moveid === 'hiddenpower') {
-						moves.push(
-							'hiddenpowerbug', 'hiddenpowerdark', 'hiddenpowerdragon', 'hiddenpowerelectric', 'hiddenpowerfighting', 'hiddenpowerfire', 'hiddenpowerflying', 'hiddenpowerghost', 'hiddenpowergrass', 'hiddenpowerground', 'hiddenpowerice', 'hiddenpowerpoison', 'hiddenpowerpsychic', 'hiddenpowerrock', 'hiddenpowersteel', 'hiddenpowerwater'
-						);
+				}
+				learnsetid = this.nextLearnsetid(learnsetid, species.id, true);
+			}
+			if (sketch || isHackmons) {
+				if (isHackmons) moves = [];
+				for (let id in BattleMovedex) {
+					if (!format.startsWith('cap') && (id === 'paleowave' || id === 'shadowstrike')) continue;
+					const move = dex.moves.get(id);
+					if (move.gen > dex.gen) continue;
+					if (sketch) {
+						if (move.flags['nosketch'] || move.isMax || move.isZ) continue;
+						if (move.isNonstandard && move.isNonstandard !== 'Past') continue;
+						if (move.isNonstandard === 'Past' && this.formatType !== 'natdex') continue;
+						sketchMoves.push(move.id);
+					} else {
+						if (!(dex.gen < 8 || this.formatType === 'natdex') && move.isZ) continue;
+						if (typeof move.isMax === 'string') continue;
+						if (move.isMax && dex.gen > 8) continue;
+						if (move.isNonstandard === 'Past' && this.formatType !== 'natdex') continue;
+						if (move.isNonstandard === 'LGPE' && this.formatType !== 'letsgo') continue;
+						moves.push(move.id);
 					}
 				}
 			}
-			learnsetid = this.nextLearnsetid(learnsetid, species.id, true);
-		}
-		if (sketch || isHackmons) {
-			if (isHackmons) moves = [];
-			for (let id in BattleMovedex) {
-				if (!format.startsWith('cap') && (id === 'paleowave' || id === 'shadowstrike')) continue;
-				const move = dex.moves.get(id);
-				if (move.gen > dex.gen) continue;
-				if (sketch) {
-					if (move.flags['nosketch'] || move.isMax || move.isZ) continue;
-					if (move.isNonstandard && move.isNonstandard !== 'Past') continue;
-					if (move.isNonstandard === 'Past' && this.formatType !== 'natdex') continue;
-					sketchMoves.push(move.id);
-				} else {
-					if (!(dex.gen < 8 || this.formatType === 'natdex') && move.isZ) continue;
-					if (typeof move.isMax === 'string') continue;
-					if (move.isMax && dex.gen > 8) continue;
-					if (move.isNonstandard === 'Past' && this.formatType !== 'natdex') continue;
-					if (move.isNonstandard === 'LGPE' && this.formatType !== 'letsgo') continue;
-					moves.push(move.id);
-				}
-			}
-		}
-		if (this.formatType === 'metronome') moves = ['metronome'];
-		if (isSTABmons) {
-			for (let id in this.getTable()) {
-				const move = dex.moves.get(id);
-				if (moves.includes(move.id)) continue;
-				if (move.gen > dex.gen) continue;
-				if (move.isZ || move.isMax || (move.isNonstandard && move.isNonstandard !== 'Unobtainable')) continue;
+			if (this.formatType === 'metronome') moves = ['metronome'];
+			if (isSTABmons) {
+				for (let id in this.getTable()) {
+					const move = dex.moves.get(id);
+					if (moves.includes(move.id)) continue;
+					if (move.gen > dex.gen) continue;
+					if (move.isZ || move.isMax || (move.isNonstandard && move.isNonstandard !== 'Unobtainable')) continue;
 
-				const speciesTypes: string[] = [];
-				const moveTypes: string[] = [];
-				for (let i = dex.gen; i >= species.gen && i >= move.gen; i--) {
-					const genDex = Dex.forGen(i);
-					moveTypes.push(genDex.moves.get(move.name).type);
+					const speciesTypes: string[] = [];
+					const moveTypes: string[] = [];
+					for (let i = dex.gen; i >= species.gen && i >= move.gen; i--) {
+						const genDex = Dex.forGen(i);
+						moveTypes.push(genDex.moves.get(move.name).type);
 
-					const pokemon = genDex.species.get(species.name);
-					let baseSpecies = genDex.species.get(pokemon.changesFrom || pokemon.name);
-					if (!pokemon.battleOnly) speciesTypes.push(...pokemon.types);
-					let prevo = pokemon.prevo;
-					while (prevo) {
-						const prevoSpecies = genDex.species.get(prevo);
-						speciesTypes.push(...prevoSpecies.types);
-						prevo = prevoSpecies.prevo;
-					}
-					if (pokemon.battleOnly && typeof pokemon.battleOnly === 'string') {
-						species = dex.species.get(pokemon.battleOnly);
-					}
-					const excludedForme = (s: Dex.Species) => [
-						'Alola', 'Alola-Totem', 'Galar', 'Galar-Zen', 'Hisui', 'Paldea', 'Paldea-Combat', 'Paldea-Blaze', 'Paldea-Aqua',
-					].includes(s.forme);
-					if (baseSpecies.otherFormes && !['Wormadam', 'Urshifu'].includes(baseSpecies.baseSpecies)) {
-						if (!excludedForme(species)) speciesTypes.push(...baseSpecies.types);
-						for (const formeName of baseSpecies.otherFormes) {
-							const forme = dex.species.get(formeName);
-							if (!forme.battleOnly && !excludedForme(forme)) speciesTypes.push(...forme.types);
+						const pokemon = genDex.species.get(species.name);
+						let baseSpecies = genDex.species.get(pokemon.changesFrom || pokemon.name);
+						if (!pokemon.battleOnly) speciesTypes.push(...pokemon.types);
+						let prevo = pokemon.prevo;
+						while (prevo) {
+							const prevoSpecies = genDex.species.get(prevo);
+							speciesTypes.push(...prevoSpecies.types);
+							prevo = prevoSpecies.prevo;
+						}
+						if (pokemon.battleOnly && typeof pokemon.battleOnly === 'string') {
+							species = dex.species.get(pokemon.battleOnly);
+						}
+						const excludedForme = (s: Dex.Species) => [
+							'Alola', 'Alola-Totem', 'Galar', 'Galar-Zen', 'Hisui', 'Paldea', 'Paldea-Combat', 'Paldea-Blaze', 'Paldea-Aqua',
+						].includes(s.forme);
+						if (baseSpecies.otherFormes && !['Wormadam', 'Urshifu'].includes(baseSpecies.baseSpecies)) {
+							if (!excludedForme(species)) speciesTypes.push(...baseSpecies.types);
+							for (const formeName of baseSpecies.otherFormes) {
+								const forme = dex.species.get(formeName);
+								if (!forme.battleOnly && !excludedForme(forme)) speciesTypes.push(...forme.types);
+							}
 						}
 					}
-				}
-				let valid = false;
-				for (let type of moveTypes) {
-					if (speciesTypes.includes(type)) {
-						valid = true;
-						break;
+					let valid = false;
+					for (let type of moveTypes) {
+						if (speciesTypes.includes(type)) {
+							valid = true;
+							break;
+						}
 					}
+					if (valid) moves.push(id);
 				}
-				if (valid) moves.push(id);
 			}
 		}
-
+		// KN: moves finished getting pushed.
 		moves.sort();
 		sketchMoves.sort();
 
 		let usableMoves: SearchRow[] = [];
 		let uselessMoves: SearchRow[] = [];
-		for (const id of moves) {
-			const isUsable = this.moveIsNotUseless(id as ID, species, moves, this.set);
-			if (isUsable) {
-				if (!usableMoves.length) usableMoves.push(['header', "Moves"]);
-				usableMoves.push(['move', id as ID]);
-			} else {
-				if (!uselessMoves.length) uselessMoves.push(['header', "Usually useless moves"]);
-				uselessMoves.push(['move', id as ID]);
+
+		// Helper function to process a list of move IDs
+		const processMoveList = (moveIds: string[], headerTitle: string, uselessHeaderTitle: string) => {
+			const finalUsable: ID[] = [];
+			const finalUseless: ID[] = [];
+
+			for (const id of moveIds) {
+				const moveId = id as ID;
+				let isUsefulForAny = false;
+
+				// A move is usable if it is "not useless" for ANY of the species in the fusion
+				for (const species of allSpecies) {
+					if (this.moveIsNotUseless(moveId, species, moveIds, this.set)) {
+						isUsefulForAny = true;
+						break; // No need to check other species if one makes it usable
+					}
+				}
+
+				if (isUsefulForAny) {
+					if (!finalUsable.includes(moveId)) finalUsable.push(moveId);
+				} else {
+					if (!finalUseless.includes(moveId)) finalUseless.push(moveId);
+				}
 			}
-		}
+
+			// Add to the final results with headers if moves exist
+			if (finalUsable.length > 0) {
+				usableMoves.push(['header', headerTitle]);
+				for (const id of finalUsable) usableMoves.push(['move', id]);
+			}
+			if (finalUseless.length > 0) {
+				uselessMoves.push(['header', uselessHeaderTitle]);
+				for (const id of finalUseless) uselessMoves.push(['move', id]);
+			}
+		};
+
+		// Execute for standard moves
+		processMoveList(moves, "Moves", "Usually useless moves");
+
+		// Execute for sketched moves
 		if (sketchMoves.length) {
-			usableMoves.push(['header', "Sketched moves"]);
-			uselessMoves.push(['header', "Useless sketched moves"]);
+			processMoveList(sketchMoves, "Sketched moves", "Useless sketched moves");
 		}
-		for (const id of sketchMoves) {
-			const isUsable = this.moveIsNotUseless(id as ID, species, sketchMoves, this.set);
-			if (isUsable) {
-				usableMoves.push(['move', id as ID]);
-			} else {
-				uselessMoves.push(['move', id as ID]);
-			}
-		}
+		// for (let species of allSpecies) {
+		// 	for (const id of moves) {
+		// 		const isUsable = this.moveIsNotUseless(id as ID, species, moves, this.set);
+		// 		if (isUsable) {
+		// 			if (!usableMoves.length) usableMoves.push(['header', "Moves"]);
+		// 			usableMoves.push(['move', id as ID]);
+		// 		} else {
+		// 			if (!uselessMoves.length) uselessMoves.push(['header', "Usually useless moves"]);
+		// 			uselessMoves.push(['move', id as ID]);
+		// 		}
+		// 	}
+		// 	if (sketchMoves.length) {
+		// 		usableMoves.push(['header', "Sketched moves"]);
+		// 		uselessMoves.push(['header', "Useless sketched moves"]);
+		// 	}
+		// 	for (const id of sketchMoves) {
+		// 		const isUsable = this.moveIsNotUseless(id as ID, species, sketchMoves, this.set);
+		// 		if (isUsable) {
+		// 			usableMoves.push(['move', id as ID]);
+		// 		} else {
+		// 			uselessMoves.push(['move', id as ID]);
+		// 		}
+		// 	}
+		// }
+
 		return [...usableMoves, ...uselessMoves];
 	}
 	filter(row: SearchRow, filters: string[][]) {

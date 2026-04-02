@@ -72,6 +72,7 @@ var Replays = {
 			if (action) self[action]();
 		});
 
+		console.log("new battle created at componentDidMount");
 		this.battle = new Battle({
 			id: id,
 			$frame: this.$('.battle'),

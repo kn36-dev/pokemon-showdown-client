@@ -874,7 +874,8 @@ function toId() {
 			};
 			this.socket.onmessage = function (msg) {
 				if (window.console && console.log) {
-					console.log('<< ' + msg.data);
+					// Commented for now, normal is logged.
+					// console.log('<< ' + msg.data);
 				}
 				self.receive(msg.data);
 			};
@@ -929,7 +930,8 @@ function toId() {
 				return;
 			}
 			if (window.console && console.log) {
-				console.log('>> ' + data);
+				// Commented for now, normally logs once in a while
+				// console.log('>> ' + data);
 			}
 			this.socket.send(data);
 		},
@@ -988,6 +990,7 @@ function toId() {
 					team.team = data.team;
 					team.loaded = true;
 					callback(team);
+					// console.log("saveTeams called at line 991 in client");
 					Storage.saveTeams();
 					var entry = app.loadingTeamQueue.shift();
 					if (entry) {
@@ -1007,6 +1010,7 @@ function toId() {
 					app.sendTeam(team, callback);
 				});
 			}
+			// console.log("packTeam triggered by getPackedTeam in client?");
 			var packedTeam = '' + Storage.getPackedTeam(team);
 			if (packedTeam.length > 25 * 1024 - 6) {
 				alert("Your team is over 25 KB. Please use a smaller team.");

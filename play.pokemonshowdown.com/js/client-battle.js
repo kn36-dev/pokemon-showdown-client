@@ -25,6 +25,12 @@
 			this.$foeHint = this.$el.find('.foehint');
 
 			BattleSound.setMute(Dex.prefs('mute'));
+
+			// console.log({ optionsPassedIntoNewBattle: {
+			// 	id: this.id,
+			// 	$frame: this.$battle,
+			// 	$logFrame: this.$chatFrame
+			// } });
 			this.battle = new Battle({
 				id: this.id,
 				$frame: this.$battle,
@@ -136,6 +142,7 @@
 			this.updateControls();
 		},
 		add: function (data) {
+			// console.trace({ dataInAddMethodInBattleRoom: data });
 			if (!data) return;
 			if (data.substr(0, 6) === '|init|') {
 				return this.init(data);
